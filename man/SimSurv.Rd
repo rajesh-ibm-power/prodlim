@@ -1,0 +1,149 @@
+\name{SimSurv}
+\alias{SimSurv}
+%- Also NEED an '\alias' for EACH other topic documented here.
+\title{Simulating survival data }
+\description{
+  Censored event times are drawn from user specified conditional distributions
+  given simulated covariates.
+}
+\usage{
+SimSurv(N,
+	surv = list(dist="rweibull",
+	  args=list(shape=1),
+	  baseline=1,
+	  link="exp",
+	  coef=1,
+	  transform=NULL,
+	  method="simulation"),
+	cens = list(dist="rexp",
+	  args=NULL,
+	  baseline=1/100,
+	  link="exp",
+	  max=NULL,
+	  type="right",
+	  coef=0,
+	  transform=NULL,
+	  method="transform"),
+	cova = list(X1=list("rnorm",mean=0,sd=2),
+	  X2=list("rbinom",size=1,prob=.5)),
+	verbose=1,
+	...)
+}
+%- maybe also 'usage' for other objects documented here.
+\arguments{
+  \item{N}{Sample size}
+  \item{surv}{A list with the following arguments
+    \item{dist}{ name of the function to draw the survival distribution}
+    \item{args}{ list of extra arguments to `dist'}
+    \item{baseline}{ the baseline risk}
+    \item{link}{ names of the link to the covariates}
+    \item{coef}{ numeric vector of regression coefficients. the ith is
+      used for the ith entry of \code{cova}}
+    \item{transform}{ list of function names one for each covariate. the ith is applied
+      to values of the ith covariate before it is linked to generate the
+      survival times. the second}
+  }
+  \item{cens}{A list with the following elements
+    \item{dist}{ name of the function to draw the censoring distribution}
+    \item{args}{ list of extra arguments to `dist'}
+    \item{baseline}{ the baseline risk}
+    \item{link}{ names of the link to the covariates}
+    \item{max}{ maximal value where all event times are right censored}
+    \item{type}{ "right" for right censored data, "interval" for interval
+      censored data}
+    \item{coef}{ numeric vector of regression coefficients. the ith is
+      used for the ith entry of \code{cova}}
+    \item{transform}{ list of function names one for each covariate. the ith is applied}
+    to values of the ith covariate before it is linked to generate the
+    survival times.}
+  \item{cova}{either a matrix with \code{N} rows,
+    or a named list to generate the covariates. each entry
+    is a list where the first element is the names of the
+    function used to draw the covariate values and the remaining
+    elements are arguments passed to that function. For example
+    \code{cova=list(X = list(dist = "rlnorm", meanlog = 2, sdlog = 0.4))}
+    generates a single log-normally distributed covariate called
+    \code{X}.
+  }
+  \item{verbose}{Set to \code{FALSE} to shut up in simulations}
+  \item{...}{used for convenient argument specification, e.g.
+    \code{surv.transform.X2=function(x)x^2}
+    will overwrite a corresponding entry
+    of \code{surv} for the \code{transform} of the
+    covariate \code{X2}
+  }
+}
+\details{
+  Possible distributions to generate covariates:
+
+  X.lognorm = list(dist = "rlnorm", meanlog = 2, sdlog = 0.4)
+   
+   X.unif = list(dist = "runif", min = 0, max = 10),
+   
+   X.exp = list(dist = "rexp", rate = 0.4)
+   
+   X.bernoulli = list(dist = "rbinom", size = 1, prob = 0.3)
+   
+   X.binom = list(dist = "rbinom", size = 4, prob = 0.8)
+   
+   X.nbinom = list(dist = "rnbinom", size = 3, mu = 2)
+   
+   X.poisson = list(dist = "rpois", lambda = 1.3) 
+}
+\value{
+  A data.frame:
+  \item{time}{the right censored event times}
+  \item{status}{the survival status}
+  \item{X}{the values of the covariate \code{X}}
+  \item{f.X}{the transformed values of the covariate \code{X}}
+  \item{time}{the uncensored event times}
+
+  Attributes of the data.frame
+  \item{formula} a formula to evaluate the generated event history
+  object
+}
+\references{
+
+  Ralf Bender, Thomas Augustin, and Maria Blettner. Generating 
+survival times to simulate Cox proportional hazards models by Ralf Bender, 
+Thomas Augustin and Maria Blettner, Statistics in Medicine 2005; 
+24:1713-1723. Stat Med, 25(11):1978-9, 2006.
+
+}
+\author{Thomas A. Gerds \email{tag@biostat.ku.dk}}
+% \note{
+% }
+\seealso{\code{\link{prodlim}}}
+\examples{
+
+SimSurv(10)
+
+SurvData=SimSurv(100,cens.baseline=1/10,surv.baseline=2)
+
+Hist(SurvData$time,SurvData$status)
+
+prodlim(Hist(time,status)~1,data=SurvData)
+
+plot(prodlim(Hist(time,status)~1,data=SurvData))
+
+plot(SurvData,atrisk=FALSE,legend=FALSE)
+
+SurvData=SimSurv(100,cens.baseline=1/10,surv.baseline=2,surv.coef=c(-1,-2),
+         cova=list( X.exp = list(dist = "rexp", rate = 0.4),
+         X.bernoulli = list(dist = "rbinom", size = 1, prob = 0.3)))
+
+% coxph(Surv(time,status)~X.exp+X.bernoulli,data=SurvData)
+
+SurvData=SimSurv(100,cens.baseline=1/10,surv.baseline=2,surv.coef=c(-1,-2),cens.coef=c(0,1),
+          cova=list( X.exp = list(dist = "rexp", rate = 0.4),
+          X.bernoulli = list(dist = "rbinom", size = 1, prob = 0.3)))
+
+coxph(Surv(time,status==0)~X.exp+X.bernoulli,data=SurvData)
+
+coxph(Surv(time,status)~X.exp+X.bernoulli,data=SurvData)
+
+}
+% Add one or more standard keywords, see file 'KEYWORDS' in the
+% R documentation directory.
+\keyword{survival}% at least one, from doc/KEYWORDS
+% \keyword{simulation}% at least one, from doc/KEYWORDS
