@@ -84,53 +84,40 @@ Only for compatibility reasons.
 \details{
   Predicted (survival) probabilities are returned that can be plotted, summarized
   and used for inverse of probability of censoring weighting. 
-} \value{
+}
+\value{
+  \code{type=="surv"} A list or a matrix with survival
+  probabilities for all times and all newdata.
 
-  \code{type=="surv"}: A list or a matrix with survival
-probabilities for all times and all newdata.
+  \code{type=="cuminc"} A list or a matrix with cumulative
+  incidences for all times and all newdata.
 
-  \code{type=="cuminc"}: A list or a matrix with cumulative
-incidences for all times and all newdata.
-
-  \code{type=="list"}: A list with the following components:
+  \code{type=="list"} A list with the following components:
 
   \item{times}{The argument \code{times} carried forward}
-
-  \item{predictors}{
-   The relevant part of the argument \code{newdata}.
- }
-
+  
+  \item{predictors}{The relevant part of the argument \code{newdata}.}
   \item{indices}{
-A list with the following components:
-\item{time}{Where to find values corresponding to the requested times}
-\item{strata}{Where to find values corresponding to the
-values of the variables in newdata.
-Together time and strata show where to find the predicted probabilities.}
+    A list with the following components
+   
+    \code{time}: Where to find values corresponding to the requested times
+    \code{strata}: Where to find values corresponding to the
+    values of the variables in newdata.
+    Together time and strata show where to find the predicted probabilities.
+ }
+ \item{dimensions}{
+   a list with the following components:
+   \code{time} : The length of \code{times} 
+   \code{strata} : The number of rows in \code{newdata}
+   \code{names.strata} : Labels for the covariate values.
+ }
 }
-
-  \item{dimensions}{
-a list with the following components:
-\item{time}{The length of \code{times} }
-\item{strata}{
-The number of rows in \code{newdata}
-}}
-
-\item{names.strata}{Labels for the covariate values.}
-}
-% \references{ ~put references to the literature/web site here ~ }
-\author{Thomas Gerds <tag@biostat.ku.dk>}
-
-% \note{ ~~further notes~~ 
-
-%   ~Make other sections like Warning with \section{Warning }{....} ~
-
+\author{Thomas Alexander Gerds <tag@biostat.ku.dk>}
 \seealso{\code{\link{predictSurvIndividual}}}
+\examples{
 
- \examples{
-\dontrun{
-library(survival)
-data(pbc)
-fit <- prodlim(Hist(time,status)~1,data=pbc)
+dat <- SimSurv(400)
+fit <- prodlim(Hist(time,status)~1,data=dat)
 
 ## predict the survival probs at selected times 
 predict(fit,times=c(10,100,1000))
@@ -139,15 +126,14 @@ predict(fit,times=c(10,100,1000))
 predict(fit,times=c(-1,0,10,100,1000,10000))
 
 ## newdata is required if there are strata
-## or neighborhoods (ie overlapping strata)
-mfit <- prodlim(Hist(time,status)~edema+age,data=pbc)
-predict(mfit,times=c(-1,0,10,100,1000,10000),newdata=pbc[18:21,])
+## or neighborhoods (i.e. overlapping strata)
+mfit <- prodlim(Hist(time,status)~X1+X2,data=dat)
+predict(mfit,times=c(-1,0,10,100,1000,10000),newdata=dat[18:21,])
 
 ## this can be requested in matrix form
-predict(mfit,times=c(-1,0,10,100,1000,10000),newdata=pbc[18:21,],mode="matrix")
+predict(mfit,times=c(-1,0,10,100,1000,10000),newdata=dat[18:21,],mode="matrix")
 
 ## and even transposed
-predict(mfit,times=c(-1,0,10,100,1000,10000),newdata=pbc[18:21,],mode="matrix",bytime=TRUE)
-}
+predict(mfit,times=c(-1,0,10,100,1000,10000),newdata=dat[18:21,],mode="matrix",bytime=TRUE)
 }
 \keyword{survival}% at least one, from doc/KEYWORDS

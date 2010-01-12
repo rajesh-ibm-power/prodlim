@@ -1,0 +1,96 @@
+<contents depth="1">
+; {{{warnings 27 Nov 2009 (22:11)
+
+* warnings 27 Nov 2009 (22:11)
+
+http://www.r-project.org/nosvn/R.check/r-devel-linux-ix86/prodlim-00install.html
+http://www.r-project.org/nosvn/R.check/r-devel-linux-ix86/prodlim-00check.html
+http://cran.r-project.org/web/checks/check_summary.html
+; }}}
+; {{{jackknife for competing risks 10 Aug 2009 (13:57)
+
+* jackknife for competing risks 10 Aug 2009 (13:57)
+
+library(prodlim)
+library(pseudo)
+ddd <- read.table("~/research/SoftWare/prodlim/Examples/comprisk-frame.txt",header=T)
+fff <- prodlim(Hist(time,event)~1,data=ddd)
+fff7 <- prodlim(Hist(time,event)~1,data=ddd[-7,])
+fff1 <- prodlim(Hist(time,event)~1,data=ddd[-1,])
+ttt <- ddd$time
+p1 <- predict(fff1,times=ttt)
+p7 <- predict(fff7,times=ttt)
+summary(fff1,times=1:10,cause=1)
+sf <- leaveOneOut.competing.risks(fff,times=ttt)
+cbind(loo=sf[7,],true=p7)
+cbind(loo=sf[1,],true=p1)
+jack <- with(ddd,pseudoci(time,event,ttt))[,-c(1:2,seq(4,22,2))]
+jack2 <- jackknife.competing.risks(fff,times=ttt)
+all(sapply(1:10,function(x){
+a <- round(jack[,x],4)
+b <- round(jack2[,x],4)
+# all(a[!is.na(a)]==b[!is.na(b)])
+all(a[!is.na(a)]==b[!is.na(a)])
+}))
+
+
+N <- 2000
+ddd <- data.frame(time=1:N,event=rbinom(N,2,.5),X=rbinom(N,1,.5))
+ttt <- c(3,5,10)
+# ttt <- ddd$time
+fff <- prodlim(Hist(time,event)~1,data=ddd)
+system.time(jack <- with(ddd,pseudoci(time,event,ttt))[,-c(1:2,seq(4,N+2,2))])
+system.time({jack2 <- jackknife.competing.risks(fff,times=ttt)})
+all(round(jack2[,1],9)==round(jack[,1],9))
+
+all(sapply(1:N,function(x){
+a <- round(jack[x,],4)
+b <- round(jack2[x,],4)
+# all(a[!is.na(a)]==b[!is.na(b)])
+all(a[!is.na(a)]==b[!is.na(a)])
+}))
+
+
+; }}}
+; {{{icens 06 Jun 2009 (18:06)
+
+* icens 06 Jun 2009 (18:06)
+
+repaired icens_prodlim.c in version 1.1.0
+todo:
+  1. check number of events
+  2. test page
+  3. man pages
+  4. simulation study 
+  
+; }}}
+; {{{repaired confints for plot.prodlim 28 May 2009 (14:14)
+
+* repaired confints for plot.prodlim 28 May 2009 (14:14)
+
+; }}}
+; {{{quantiles 25 May 2009 (17:43)
+
+* quantiles 25 May 2009 (17:43)
+
+library(prodlim)
+dat <- SimSurv(100,cens.baseline=1/100,surv.baseline=1/100)
+fit <- prodlim(Hist(time,status)~1,data=dat)
+quantile(fit)
+fit <- prodlim(Hist(time,status)~X2,data=dat)
+quantile(fit)
+
+
+; }}}
+; {{{pseudovalues 22 May 2009 (20:45)
+
+* pseudovalues 22 May 2009 (20:45)
+
+library(prodlim)
+library(pseudo)
+dat=SimSurv(4000)
+x=prodlim(Hist(time,status)~1,data=dat)
+system.time({u=jackknife(x)})
+system.time({v=pseudosurv(time=dat$time,event=dat$status,tmax=unique(dat$time))})
+
+; }}}

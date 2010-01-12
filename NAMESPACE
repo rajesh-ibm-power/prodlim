@@ -1,53 +1,25 @@
 useDynLib(prodlim)
 
-export(##        "CompGMLEdental",
-       "Hist",
-       ##        "IntIndex",
+export("Hist",
        "NN",
-       ##        "cluster",
-       ##        "PetoInt",
-       ##        "[.Hist",
-       ##        "atRisk",
-       ##        "bootstrap.prodlim",
-       ##        "extract.name.from.special",
-       ##        "findArrow",
-       ##        "icens.prodlim",
-       ##        "iindex",
-       ##        "iindex2",
-       ##        "is.na.Hist",
-       ##        "jackknife.prodlim",
-       ##        "life.table",
-       ##        "mean.prodlim",
-       ##        "model.specials",
        "neighborhood",
-       ##        "plot.Hist",
-       ##        "plot.prodlim",
-       ##        "predict.prodlim",
-       ##        "predictCuminc",
-       ##        "predictList",
-       ##        "predictNevent",
-       ##        "predictSurv",
        "predictSurvIndividual",
-       ##        "print.Hist",
-       ##        "print.IntIndex",
-       ##        "print.neighborhood",
-       ##        "print.prodlim",
        "prodlim",
-       ##        "prodlimIcensSurv",
-       ##        "prodlimMulti",
        "row.match",
-       "SimSurv",
-       "sindex")
+       "sindex",
+       "SimSurv")
 
 S3method(print,Hist)
 S3method(summary,Hist)
 S3method(plot,Hist)
-
-S3method(plot,SimSurv)
-
 S3method(print,neighborhood)
-
 S3method(print,prodlim)
 S3method(summary,prodlim)
 S3method(predict,prodlim)
 S3method(plot,prodlim)
+
+# since version 1.1.1
+#S3method(jackknife,survival)
+#S3method(jackknife,competing.risks)
+#S3method(quantile,prodlim)
+

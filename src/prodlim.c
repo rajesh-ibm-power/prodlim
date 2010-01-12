@@ -42,7 +42,7 @@ void prodlim(double *y,
 	     int *model,
 	     int *independent) {
   
-  int i, t, u, start, stop, size_temp;
+  int t, u, start, stop, size_temp;
   
   t=0;
   start=0;

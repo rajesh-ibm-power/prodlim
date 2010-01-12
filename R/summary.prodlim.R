@@ -3,18 +3,20 @@
                               newdata,
                               verbose=TRUE,
                               max.tables=20,
-                              incidence=FALSE,
-                              cause=1,
+                              surv=TRUE,
+                              cause,
                               intervals=FALSE,
-                              proz=FALSE,
+                              percent=FALSE,
+                              showTime=TRUE,
                               ...) {
-  # model characteristics
+
+  # classify the situation at hand
   # --------------------------------------------------------------------
-  cens.type <- object$cens.type
-  model <- object$model
-  cluster <- object$clustervar
-  cotype <- object$covariate.type
-  
+  cens.type <- object$cens.type         # uncensored, right or interval censored
+  model <- object$model                 # survival, competing risks or multi-state
+  cluster <- object$clustervar          # clustered data?
+  cotype <- object$covariate.type       # no, discrete, continuous or both
+
   # times
   # --------------------------------------------------------------------
   jump.times <- object$time
@@ -24,22 +26,22 @@
   ntimes <- length(times)
   
   if (cens.type=="intervalCensored"){
-    print(data.frame(time=paste("(",paste(object$time[1,],object$time[2,],sep="-"),"]",sep=""),
-                     n.risk=round(object$n.risk,2),
-                     n.event=round(object$n.event,2),
-                     ##    n.lost=object$n.lost,
-                     surv=object$surv))
+    temp <- data.frame(time=paste("(",paste(signif(object$time[1,],2),
+                         signif(object$time[2,],2),
+                         sep="-"),"]",sep=""),
+                       n.risk=signif(object$n.risk,2),
+                       n.event=signif(object$n.event,2),
+                       ##    n.lost=object$n.lost,
+                       surv=object$surv)
   }
   else{
-    
     # covariates
     # --------------------------------------------------------------------
     if (cotype>1){
       if (missing(newdata) || length(newdata)==0){
         X <- object$X
-        ##       names(X) <- sapply(strsplit(names(X),"strata.\|NN."),function(x)x[2])
         if (NROW(X)>max.tables){
-          if (verbose>0) warning(call.=TRUE,immediate.=TRUE,paste("\nPredicted survival probabilities for",NROW(X),"covariate values available.\nShown are only the first, the median and the last table ...\nto see other tables use arguments `X' and `max.tables'\n"))
+          if (verbose>0) warning(call.=TRUE,immediate.=TRUE,paste("\nLife tables are available for",NROW(X),"different covariate constellations.\nShown are only the first, the median and the last table ...\nto see other tables use arguments `X' and `max.tables'\n"))
           X <- X[c(1,round(median(1:NROW(X))),NROW(X)),,drop=FALSE]
         }
       }
@@ -47,45 +49,59 @@
     }
     else
       X <- NULL
-
+    
     if (model=="survival") {
-      stat.alist <- list(c("surv",1),c("se.surv",0))
+      stats <- list(c("surv",1),c("se.surv",0))
       if (!is.null(object$conf.int))
-        stat.alist <- c(stat.alist,list(c("lower",0),c("upper",1)))
-      if (incidence==TRUE){
-        object$incidence <- 1-object$surv
-        object$se.inc <- object$se.surv
-        object$inc.upper <- 1-object$lower
-        object$inc.lower <- 1-object$upper
-        stat.alist <- list(c("incidence",0),c("se.inc",0))
+        stats <- c(stats,list(c("lower",0),c("upper",1)))
+      if (surv==FALSE){
+        object$cuminc <- 1-object$surv
+        object$se.cuminc <- object$se.surv
+        cuminc.upper <- 1-object$lower
+        cuminc.lower <- 1-object$upper
+        object$lower <- cuminc.lower
+        object$upper <- cuminc.upper
+        stats <- list(c("cuminc",0),c("se.cuminc",0))
         if (!is.null(object$conf.int))
-          stat.alist <- c(stat.alist,list(c("inc.lower",0),c("inc.upper",1)))
+          stats <- c(stats,list(c("lower",0),c("upper",1)))
       }
     }
     if (model=="competing.risks"){
-      stat.alist <- list(c("cuminc",1,cause),c("se.cuminc",0,cause))
+      stats <- list(c("cuminc",0),c("se.cuminc",0))
       if (!is.null(object$conf.int))
-        stat.alist <- c(stat.alist,list(c("lower",0,cause),c("upper",1,cause)))
+        stats <- c(stats,list(c("lower",0),c("upper",0)))
     }
-    temp <- predictNevent(object,times,X,stat.alist=stat.alist,intervals=intervals)
-    
-    if (verbose==TRUE)
-      if (cotype>1){
-        if (proz==TRUE){
-          for (i in 1:length(temp)){
-            for (n in sapply(stat.alist,function(x)x[1]))
-              temp[[i]][,n] <- 100* temp[[i]][,n]
-          }
-        }
-        print.listof(temp,quote=FALSE,...)
-      }
-      else{
-        if(proz==TRUE){
-          for (n in sapply(stat.alist,function(x)x[1]))
-            temp[,n] <- 100* temp[,n]
-        }
-        print(temp,quote=FALSE,...)
-      }
-    invisible(temp)
+    temp <- lifeTab(object=object,
+                    times=times,
+                    newdata=X,
+                    stats=stats,
+                    intervals=intervals,
+                    percent=percent,
+                    showTime=showTime)
+    if (model=="competing.risks" & !missing(cause)){
+      if (is.numeric(cause) && !is.numeric(names(temp)))
+        cause <- attr(object$model.response,"states")[cause]
+        # found <- match(cause,attr(object$model.response,"states"),nomatch=FALSE))
+        Found <- match(cause,names(temp))
+      if (all(Found)) temp <- temp[Found]
+      else warning("could not find requested causes in attributes of object$mode.response")
+    }
   }
+  if (verbose==TRUE){
+    if (model=="survival")
+      if (cotype==1)
+        print(temp,quote=FALSE,...)
+      else
+        print.listof(temp,quote=FALSE,...)
+    else
+      if (model=="competing.risks")
+        for (cc in 1:length(temp)){
+          cat("\n\n----------> Cause: ",names(temp)[cc],"\n\n")
+          if (cotype==1)
+            print(temp[[cc]],quote=FALSE,...)
+          else
+            print.listof(temp[[cc]],quote=FALSE,...)
+        }
+  }
+  invisible(temp)
 }

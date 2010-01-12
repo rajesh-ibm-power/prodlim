@@ -22,8 +22,8 @@ void prodlim_comprisk(double* y,
 		      int start,
 		      int stop) {
   
-  int i,j,s,u,d,d1,d2;
-  double S,S_lag,H,varH,n,I1;
+  int i,j,s,d,d1,d2;
+  double S,S_lag,H,varH,n;
   
   /*   initialize */
   s=(*t);

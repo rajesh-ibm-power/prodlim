@@ -26,13 +26,13 @@ neighborhood(x, bandwidth = NULL, kernel = "box")
 \value{
   An object of class 'neighborhood'.
   The value is a list that includes the unique values of `x'
-  (\code{values}) for which a neighborhood is described by
+  (\code{values}) for which a neighborhood, consisting of the nearest neighbors, is defined by
   the first neighbor (\code{first.nbh}) of the usually very long
   vector \code{neighbors}
-  and the size of the neighborhood (\code{size.nbh}). Further, the
-  arguments \code{bandwidth}, \code{kernel}, the total sample
-  size \code{n} and the number of unique values \code{nu} is
-  included.}
+  and the size of the neighborhood (\code{size.nbh}). 
+  
+  Further values are the arguments \code{bandwidth}, \code{kernel}, the total sample
+  size \code{n} and the number of unique values \code{nu}.}
 
 \references{ 
   Stute, W. "Asymptotic Normality of Nearest Neighbor Regression Function

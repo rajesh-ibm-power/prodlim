@@ -58,7 +58,6 @@ void prodlim_multistates(int* n,
 
   int i=0;
   int k=0;
-  int j=0;
   int s=0;
   int u=0;
   int t=0;

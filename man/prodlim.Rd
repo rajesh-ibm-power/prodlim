@@ -20,7 +20,8 @@
                maxiter=1000,
                grid,
                tol=7,
-               ml=FALSE)
+               ml=FALSE,
+               exact=TRUE)
      }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -82,6 +83,8 @@
     the product limit version of the
     self-consistent estimate.
   }
+  \item{exact}{If TRUE the grid of time points used for estimation
+    includes all the L and R endpoints of the observed intervals.}
 }
 \details{
 
@@ -180,7 +183,7 @@ summary(fit)
 
 ## --------------------clustered data---------------------
 
-dat <- SimSurv(100,cova=list(patnr=list("rbinom",30,.5)),surv.baseline=1/10000000)
+dat <- SimSurv(100,cova=list(patnr=list("rbinom",30,.5)),surv.coef=1,surv.baseline=1/10000000)
 fit <- prodlim(Hist(time,status)~cluster(patnr),data=dat)
 print(fit)
 plot(fit)
