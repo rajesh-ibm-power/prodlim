@@ -4,7 +4,7 @@
 \title{Plot simulated survival data }
 \description{
   Survival data are simulated with \code{SimSurv}. 
-  Then this function applies the Kaplan-Meier estimator 
+  Then this function applies the LinksKaplan-Meier estimator 
   -- possibly in strata defined by covariates -- and plots the result.
 }
 \usage{

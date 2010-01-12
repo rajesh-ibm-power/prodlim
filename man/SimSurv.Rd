@@ -8,54 +8,19 @@
 }
 \usage{
 SimSurv(N,
-	surv = list(dist="rweibull",
-	  args=list(shape=1),
-	  baseline=1,
-	  link="exp",
-	  coef=1,
-	  transform=NULL,
-	  method="simulation"),
-	cens = list(dist="rexp",
-	  args=NULL,
-	  baseline=1/100,
-	  link="exp",
-	  max=NULL,
-	  type="right",
-	  coef=0,
-	  transform=NULL,
-	  method="transform"),
-	cova = list(X1=list("rnorm",mean=0,sd=2),
-	  X2=list("rbinom",size=1,prob=.5)),
+	surv,
+	cens,
+	cova,
 	verbose=1,
 	...)
 }
-%- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{N}{Sample size}
-  \item{surv}{A list with the following arguments
-    \item{dist}{ name of the function to draw the survival distribution}
-    \item{args}{ list of extra arguments to `dist'}
-    \item{baseline}{ the baseline risk}
-    \item{link}{ names of the link to the covariates}
-    \item{coef}{ numeric vector of regression coefficients. the ith is
-      used for the ith entry of \code{cova}}
-    \item{transform}{ list of function names one for each covariate. the ith is applied
-      to values of the ith covariate before it is linked to generate the
-      survival times. the second}
-  }
-  \item{cens}{A list with the following elements
-    \item{dist}{ name of the function to draw the censoring distribution}
-    \item{args}{ list of extra arguments to `dist'}
-    \item{baseline}{ the baseline risk}
-    \item{link}{ names of the link to the covariates}
-    \item{max}{ maximal value where all event times are right censored}
-    \item{type}{ "right" for right censored data, "interval" for interval
-      censored data}
-    \item{coef}{ numeric vector of regression coefficients. the ith is
-      used for the ith entry of \code{cova}}
-    \item{transform}{ list of function names one for each covariate. the ith is applied}
-    to values of the ith covariate before it is linked to generate the
-    survival times.}
+  \item{surv}{Dummy argument. The survival distribution is determined by
+    arguments of the form \code{surv.arg}. See Details}
+  \item{cens}{If FALSE data are left uncensored. Otherwise the censoring
+    distribution is specified by using arguments of the form
+    \code{cens.arg}. See Details.}
   \item{cova}{either a matrix with \code{N} rows,
     or a named list to generate the covariates. each entry
     is a list where the first element is the names of the
@@ -74,6 +39,28 @@ SimSurv(N,
   }
 }
 \details{
+  \code{surv.dist} name of the function to draw the survival distribution
+  \code{surv.baseline} the baseline risk
+  \code{surv.link} names of the link to the covariates
+  \code{surv.coef} numeric vector of regression coefficients. the ith is
+    used for the ith entry of \code{cova}
+  \code{surv.transform} list of function names one for each covariate. the ith is applied
+    to values of the ith covariate before it is linked to generate the
+    survival times. 
+  \code{cens.dist} name of the function to draw the censoring distribution
+  \code{cens.args} list of extra arguments to \code{dist}
+  \code{cens.baseline} the baseline risk
+  \code{cens.link} names of the link to the covariates
+  \code{cens.max} maximal value where all event times are right censored
+  \code{cens.type} "right" for right censored data, "interval" for interval
+    censored data
+  \code{cens.coef} numeric vector of regression coefficients. the ith is
+    used for the ith entry of \code{cova}
+  \code{cens.transform}list of function names one for each covariate,
+    where the ith element is applied
+  to values of the ith covariate before it is linked to generate the
+  survival times.
+  
   Possible distributions to generate covariates:
 
   X.lognorm = list(dist = "rlnorm", meanlog = 2, sdlog = 0.4)
@@ -99,8 +86,7 @@ SimSurv(N,
   \item{time}{the uncensored event times}
 
   Attributes of the data.frame
-  \item{formula} a formula to evaluate the generated event history
-  object
+  \code{formula} a formula to evaluate the generated event history object
 }
 \references{
 
@@ -115,7 +101,6 @@ Thomas Augustin and Maria Blettner, Statistics in Medicine 2005;
 % }
 \seealso{\code{\link{prodlim}}}
 \examples{
-
 SimSurv(10)
 
 SurvData=SimSurv(100,cens.baseline=1/10,surv.baseline=2)
@@ -132,18 +117,17 @@ SurvData=SimSurv(100,cens.baseline=1/10,surv.baseline=2,surv.coef=c(-1,-2),
          cova=list( X.exp = list(dist = "rexp", rate = 0.4),
          X.bernoulli = list(dist = "rbinom", size = 1, prob = 0.3)))
 
-% coxph(Surv(time,status)~X.exp+X.bernoulli,data=SurvData)
 
 SurvData=SimSurv(100,cens.baseline=1/10,surv.baseline=2,surv.coef=c(-1,-2),cens.coef=c(0,1),
           cova=list( X.exp = list(dist = "rexp", rate = 0.4),
           X.bernoulli = list(dist = "rbinom", size = 1, prob = 0.3)))
 
+\dontrun{
 coxph(Surv(time,status==0)~X.exp+X.bernoulli,data=SurvData)
 
 coxph(Surv(time,status)~X.exp+X.bernoulli,data=SurvData)
-
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
 \keyword{survival}% at least one, from doc/KEYWORDS
-% \keyword{simulation}% at least one, from doc/KEYWORDS

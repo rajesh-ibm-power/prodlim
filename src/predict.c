@@ -1,3 +1,5 @@
+#include <R.h>
+
 void findex(int *findex,
 	    int *type,
 	    int *S,
@@ -7,7 +9,7 @@ void findex(int *findex,
 	    int *NR,
 	    int *NT){
   
-  int i,x,last,f;
+  int i,x,last;
   
   for (i=0;i<*NR;i++){
     
@@ -105,6 +107,7 @@ void predict_individual_survival(double *pred,
   }
 
 }
+
 void life_table(int *pred_nrisk,
 		int *pred_nevent,
 		int *pred_nlost,
@@ -127,6 +130,7 @@ void life_table(int *pred_nrisk,
       the given time points. the requested time points are given
       by Y. the event times are given by jump.
   */
+  
   for (i=0;i<*NR;i++){    
     min_jump = jump[first[i]-1];
     max_jump = jump[first[i]-1 + size[i]-1];
@@ -136,19 +140,19 @@ void life_table(int *pred_nrisk,
       count_l =0;
       if (Y[t] < min_jump){ /*
 			      first set everything to zero
-			       at all requested times that are 
-			       before the smallest event time
+			      at all requested times that are 
+			      before the smallest event time
 			    */
 	pred_nrisk[t + i *(*NT)] = nrisk[first[i]-1];
 	pred_nevent[t + i *(*NT)] = 0;
 	pred_nlost[t + i *(*NT)] = 0;
       }
       else{
-	if (Y[t] > max_jump && t==0 || Y[t] > max_jump && Y[t-1] >= max_jump){
+	if ((Y[t] > max_jump && t==0) || (Y[t] > max_jump && Y[t-1] >= max_jump)){
 	  /*
-	    once the current time and the one before are after the last jump
-	     nothing may happen at later times and hence all is zero. do the same
-	     if all requested times are after the last jump.
+	    if the current time and the one before that are later than the last jump,
+	    nothing may happen at later times and hence all is zero. do the same
+	    if all requested times are after the last jump.
 	  */
 	  while(t<(*NT)){ 
 	    pred_nrisk[t + i *(*NT)] = 0;
@@ -177,8 +181,9 @@ void life_table(int *pred_nrisk,
 	  }
 	  else{
 	    if (Y[t]==jump[first[i] -1 -1 +f]){ /* looking back */
-	      if (*intervals!=1)
+	      if (*intervals!=1){
 		pred_nrisk[t + i *(*NT)] = nrisk[first[i] -1 +f -1];
+	      }
 	      else{
 		if (jump[first[i] -1 +f -1]>=max_jump)
 		  pred_nrisk[t + i *(*NT)] = 0;

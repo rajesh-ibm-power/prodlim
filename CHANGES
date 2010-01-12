@@ -1,0 +1,4 @@
+Thu Oct 02 14:59:45 CEST 2008
+
+For competing risks models the value of prodlim contains now lists
+(instead of matrices) with entries for each cause.

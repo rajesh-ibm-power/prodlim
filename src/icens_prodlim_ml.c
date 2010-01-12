@@ -25,8 +25,8 @@ void icens_prodlim_ml(double *L,
 		      int *educate,
 		      int *niter) {
   
-  int i, j, s, done=0, step=0;
-  double atrisk, pl, haz, varhaz, diff, tmpR, tmpL ,survL, survR, survG, lenOBS, lenPeto;
+  int i, s, done=0, step=0;
+  double atrisk, pl, haz, varhaz, diff, tmpR, tmpL ,survL, survR, lenOBS;
   
     while (done==0 && step < *maxstep){
       /*       Rprintf("Step %d\n",step);  */

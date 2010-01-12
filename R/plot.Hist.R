@@ -7,6 +7,7 @@ plot.Hist <- function(x,
                       rect.args,
                       args.state.lab,
                       arrow.lab,
+                      arrow.lab.shift,
                       arrow.lab.offset,
                       arrow.lab.side=NULL,
                       arrow.lab.cex=2,
@@ -33,17 +34,20 @@ plot.Hist <- function(x,
   else
     par(mar=c(2,2,2,2),xpd=TRUE)
   
-  # find states and labs that appear inside the boxes
+  # find states and labels for the boxes
   # --------------------------------------------------------------------
   
   model.type <- attr(x,"model")
   states <- attr(x,"states")
+  #  FIXME: this should be solved in summary.Hist instead
+  sumx <- summary(x,verbose=FALSE)
+  notCensored <- sumx$trans.frame$to!="unknown"
+  sumx$trans.frame <- sumx$trans.frame[notCensored,]
+  sumx$transitions <- sumx$transitions[notCensored]
   NS <- length(states)
   if (all(as.character(as.numeric(as.factor(states)))==states))
     states <- paste(switch(model.type,"survival"="Event","competing.risks"="Cause","State"),states)
-  ##   print(states)
-  
-  x <- x[x[,"status"]!=attr(x,"cens.code"),]
+  x <- x[x[,"status"]!=attr(x,"cens.code"),,drop=FALSE]
   if (NROW(x)==0) stop("No uncensored transition.")
   
   if (missing(reverse)) reverse <- FALSE
@@ -78,7 +82,7 @@ plot.Hist <- function(x,
       NS <- length(states)
     }
   }
-  
+
   # find transitions between the states
   # --------------------------------------------------------------------
   
@@ -89,17 +93,16 @@ plot.Hist <- function(x,
     ## and are now integer valued 1 for censored
     ## and 2,..., NS otherwise
     ## thus we have to start counting from 2
-
-    if (is.null(transitions <- summary(x)$trans.frame)){
+    if (!missing(state.lab) || is.null(transitions <- sumx$trans.frame)){
       transitions <- data.frame(x[,c("from","to")]) 
-      ##     print(unique(transitions))
+      ## print(unique(transitions))
       transitions$from <- factor(transitions$from)
       levels(transitions$from) <- states[as.numeric(levels(transitions$from))-1]
       transitions$to <- factor(transitions$to)
       levels(transitions$to) <- states[as.numeric(levels(transitions$to))-1]
       ordered.transitions <- unique(transitions)
-      ##     print(ordered.transitions)
-      ##     stop()
+      ## print(ordered.transitions)
+      ## stop()
     }
     else{
       ordered.transitions <- transitions
@@ -114,13 +117,12 @@ plot.Hist <- function(x,
   }
   names(ordered.transitions) <- c("from","to")
   
-  
   # arranging the boxes
   # --------------------------------------------------------------------
   
   if (missing(layout)){
     if (model.type=="multi.states"){
-      sumx <- summary(x,verbose=FALSE)
+      # sumx <- summary(x,verbose=FALSE)
       state.types <- unlist(sumx$states)
       state.types <- state.types[state.types>0]
       if (NS==3 && all(unlist(state.types)==1)){ # illness-death-model
@@ -149,6 +151,8 @@ plot.Hist <- function(x,
     }
   }
   else{
+    if (!(is.list(layout) && all(match(c("nrow","ncol","box.pos"),names(layout),nomatch=FALSE))))
+        stop("The argument layout must be a list with the elements nrow,ncol,box.pos. See help(plot.Hist).")
     nrow <- layout$nrow
     ncol <- layout$ncol
     box.row <- sapply(layout$box.pos,function(x)x[1])
@@ -177,12 +181,12 @@ plot.Hist <- function(x,
   max.height <- max(state.height)
   box.width <- max.width + xbox.rule * max.width
   
-  if ((ncol * box.width) > Xlim) stop("The horizontal dimension of the boxes is too big -- change parameters `state.cex' and/or `xbox.rule'.")
+  if ((ncol * box.width) > Xlim) warning("The horizontal dimension of the boxes is too big -- change parameters `state.cex' and/or `xbox.rule'.")
   
   box.height <- max.height + ybox.rule * max.height
   
   if ((nrow * box.height) > Ylim)
-    stop("The vertical dimension of the boxes is too big -- change parameters `state.cex' and/or `ybox.rule'.")
+    warning("The vertical dimension of the boxes is too big -- change parameters `state.cex' and/or `ybox.rule'.")
   
   # position of boxes
   # --------------------------------------------------------------------
@@ -200,7 +204,6 @@ plot.Hist <- function(x,
   ##   ybox.position <- unlist(lapply(1:ncol,position.finder,border=Ylim,len=box.height))
   ##   ybox.position <- rep(position.finder(Ylim,box.height,nrow),NS)
 
-  
   Ypossible <- lapply(1:ncol,function(gc){
     if(auto.col[gc]>0)
       rev(position.finder(Ylim,box.height,sum(box.col==gc)))
@@ -230,7 +233,7 @@ plot.Hist <- function(x,
 
   rect.args.defaults <- list(xpd=TRUE)
   if (missing(rect.args)) rect.args <- c(list(xleft=xbox.position,ybottom=ybox.position,xright=xbox.position+box.width,ytop=ybox.position+box.height),rect.args.defaults)
-  else   rect.args <- c(list(xleft=xbox.position,ybottom=ybox.position,xright=xbox.position+box.width,ytop=ybox.position+box.height),rect.args,rect.args.defaults)
+  else rect.args <- c(list(xleft=xbox.position,ybottom=ybox.position,xright=xbox.position+box.width,ytop=ybox.position+box.height),rect.args,rect.args.defaults)
   rect.args <- rect.args[!duplicated(names(rect.args))]
   do.call("rect",rect.args)
   
@@ -249,7 +252,6 @@ plot.Hist <- function(x,
   }
   do.call("text",args.state.lab)
   
-
   # maybe put numbers in the upper left corner of the boxes
   # --------------------------------------------------------------------
   
@@ -292,7 +294,8 @@ plot.Hist <- function(x,
   else arrows.args <- arrows.args.defaults
 
   ## Added Fri Jun 20 20:01:56 CEST 2008
-  if (!missing(arrow.lab) && arrow.lab==FALSE){
+  ## Fixed again Thu Oct 02 04:01:19 CEST 2008
+  if (!missing(arrow.lab) && is.logical(arrow.lab) && arrow.lab==FALSE){
     arrow.lab.style <- "character"
     arrow.lab <- rep("",N)
   }
@@ -310,6 +313,8 @@ plot.Hist <- function(x,
     arrow.lab <- as.numeric(transitions)
   }
   if (arrow.lab.style!="none"){
+    if (missing(arrow.lab.shift))
+      arrow.lab.shift <- rep(0,N)
     arrow.lab <- lapply(1:N,function(trans){
       from.state <- match(ordered.transitions[trans,1],states)
       to.state <- match(ordered.transitions[trans,2],states)
@@ -347,7 +352,7 @@ plot.Hist <- function(x,
     from.state <- match(ordered.transitions[trans,1],states)
     to.state <- match(ordered.transitions[trans,2],states)
     
-    ##     print(c(from.state,to.state))
+    ## print(c(from.state,to.state))
     ## print(list(Box1=c(round(xbox.position[from.state],4),round(ybox.position[from.state],4)),Box2=c(round(xbox.position[to.state],4),round(ybox.position[to.state],4)),BoxDim=c(box.width,box.height),offset=arrow.head.offset,verbose=verbose))
     Apos <- findArrow(Box1=c(round(xbox.position[from.state],4),round(ybox.position[from.state],4)),Box2=c(round(xbox.position[to.state],4),round(ybox.position[to.state],4)),BoxDim=c(box.width,box.height),offset=arrow.head.offset,verbose=verbose)
     dir <- attr(Apos,"direction")
@@ -448,7 +453,8 @@ plot.Hist <- function(x,
     S <- slope(apos$x0,apos$y0,apos$x1,apos$y1)
     if (is.na(S)) S <- Inf
     amid <- c(unlist(apos[c(1,2)],use.names=FALSE)+unlist(apos[c(3,4)],use.names=FALSE))/2
-    
+    shift <- arrow.lab.shift[trans]
+    amid <- c(amid[1]+shift,amid[2]+ifelse(is.infinite(S),1,S)*shift)
     # place the lab
     # --------------------------------------------------------------------
     ## 

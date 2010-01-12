@@ -19,6 +19,7 @@ Box-arrow diagrams for multi-state models
 	  rect.args,
 	  args.state.lab,
 	  arrow.lab,
+	  arrow.lab.shift,
 	  arrow.lab.offset,
 	  arrow.lab.side=NULL,
 	  arrow.lab.cex=2,
@@ -83,7 +84,9 @@ Box-arrow diagrams for multi-state models
  \item{arrow.lab}{
    Vector of labels for the arrows.
  }
- 
+ \item{arrow.lab.shift}{
+   List of values (one for each arrow) telling how much to shift the arrow labels. 
+ }
  \item{arrow.lab.offset}{
    List of vectors of length two: the horizontal and the vertical offset
    of the arrow label from the arrow mid. Length should be equal to the number of arrows.

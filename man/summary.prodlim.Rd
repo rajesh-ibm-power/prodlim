@@ -16,10 +16,11 @@
 		newdata,
 		verbose = TRUE,
 		max.tables = 20,
-		incidence = FALSE,
-                cause=1,
+                surv=TRUE,
+                cause,
 		intervals = FALSE,
-		proz = FALSE,
+		percent = FALSE,
+                showTime=TRUE,
 		...)
 }
 %- maybe also 'usage' for other objects documented here.
@@ -45,9 +46,9 @@
     \code{max.tables} decides about the maximal number
     of tables to be shown. Defaults to 20.
   }
-  \item{incidence}{
-    Logical. If TRUE report event probabilities 
-    instead of survival probabilities. Only when
+  \item{surv}{
+    Logical. If FALSE report event probabilities 
+    instead of survival probabilities. Only available for
     \code{object$model=="survival"}.
   }
 \item{cause}{
@@ -59,9 +60,12 @@
     Logical. If TRUE count events and censored in intervals between the values of
     \code{times}.
   }
-  \item{proz}{
+  \item{percent}{
     Logical. If TRUE all estimated values are multiplied by 100 and thus
     interpretable on a percent scale.
+  }
+  \item{showTime}{
+    Passed to \code{lifetable}
   }
   \item{\dots}{
     Further arguments that are passed to the print function.
@@ -85,7 +89,7 @@
  SurvFrame <- data.frame(time=1:10,status=rbinom(10,1,.5))
  x <- prodlim(formula=Hist(time=time,status!=0)~1,data=SurvFrame)
  summary(x)
- summary(x,times=c(1,5,10,12),proz=TRUE,intervals=TRUE,digits=3)
+ summary(x,times=c(1,5,10,12),percent=TRUE,intervals=TRUE,digits=3)
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

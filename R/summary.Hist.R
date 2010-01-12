@@ -66,11 +66,12 @@ summary.Hist <- function(object, verbose=TRUE,...){
       prmatrix(cbind(names(Freq),Freq),quote=FALSE,rowlab=rep("",NROW(Freq)))},
            "competing.risks"={
              if (cens.type=="rightCensored"){
-               stupid.stupid.factor.levels <- as.integer(factor(c(cens.code,states),levels=c(cens.code,states)))
-               sorted.stupid.stupid.factor.levels <- c(stupid.stupid.factor.levels[-1],stupid.stupid.factor.levels[1])
-               events <- factor(object[,"event"],
-                                levels=sorted.stupid.stupid.factor.levels,
-                                labels=c(states,"unknown"))
+               ##                stupid.stupid.factor.levels <- as.integer(factor(c(cens.code,states),levels=c(cens.code,states)))
+               ##                sorted.stupid.stupid.factor.levels <- c(stupid.stupid.factor.levels[-1],stupid.stupid.factor.levels[1])
+               ##                events <- factor(object[,"event"],
+               ##                                 levels=sorted.stupid.stupid.factor.levels,
+               ##                                 labels=c(states,"unknown"))
+               events <- events.Hist(object)
              }
              else{
                stupid.stupid.factor.levels <- as.integer(factor(c(cens.code,states),levels=c(cens.code,states)))

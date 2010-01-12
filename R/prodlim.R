@@ -10,9 +10,10 @@
                       maxiter=1000,
                       grid,
                       tol=7,
-                      ml=FALSE)
+                      ml=FALSE,
+                      exact=TRUE)
 {
-  
+
   # check if formula is a formula 
   # --------------------------------------------------------------------
   formula.names <- try(all.names(formula),silent=TRUE)
@@ -38,31 +39,31 @@
   if (NROW(m) == 0) stop("No (non-missing) observations")
   response <- model.extract(m, "response")
   #  FIX for people who use `Surv' instead of `Hist' 
-  switch(class(response),
-         "Surv"={
-           attr(response,"model") <- "survival"
-           attr(response,"cens.type") <- "rightCensored"
-           model.type <- 1},
-         {
-           model.type <- match(attr(response,"model"),c("survival","competing.risks","multi.states"))
-         })
-  cens.type <- attr(response,"cens.type")
-  ##          stop("Response must be a survival or event history object created with `Surv' or `Hist'."))
-  #  if (force.multistate==TRUE) model.type <- 3
-  event.history <- response
-  ##   print(unclass(response))
-  if (cens.type!="intervalCensored"){
-    event.time.order <- order(event.history[,"time"],-event.history[,"status"])
+  
+  if (match("Surv",class(response),nomatch=0)!=0){
+    attr(response,"model") <- "survival"
+    attr(response,"cens.type") <- "rightCensored"
+    model.type <- 1}
+  else
+  {
+    model.type <- match(attr(response,"model"),c("survival","competing.risks","multi.states"))
   }
-  else{
-    event.time.order <- order(event.history[,"L"],-event.history[,"status"])
-  }
+cens.type <- attr(response,"cens.type")
+##          stop("Response must be a survival or event history object created with `Surv' or `Hist'."))
+#  if (force.multistate==TRUE) model.type <- 3
+event.history <- response
+##   print(unclass(response))
+if (cens.type!="intervalCensored"){
+  event.time.order <- order(event.history[,"time"],-event.history[,"status"])
+}
+else{
+  event.time.order <- order(event.history[,"L"],-event.history[,"status"])
+}
   
   # covariates
   # --------------------------------------------------------------------
-
-  covariates <- model.specials(m,special)
   
+  covariates <- model.specials(m,special)
   if (length(attr(Terms,"factors"))==0){
     cotype <- 1
   }
@@ -102,7 +103,7 @@
   # 2 : only strata 
   # 3 : only continuous
   # 4 : strata AND continuous
-  
+    
   # disjunct strata (discrete covariates)
   # --------------------------------------------------------------------
 
@@ -121,7 +122,7 @@
   else{
     sorted <- event.time.order
   }
-
+  
   response <- response[sorted,] # sort each stratum
   
   # overlapping neighborhoods (continuous covariates)
@@ -136,10 +137,8 @@
       neighbors <- nbh$neighbors
     }
     else{                               # nearest neighbors within each stratum
-      
       nbh.list <- lapply(split(Z,Sfactor),neighborhood,bandwidth=bandwidth)
       bandwidth <- sapply(nbh.list,function(nbh)nbh$bandwidth)
-      
       tabS <- c(0,cumsum(tabulate(Sfactor))[-NS])
       neighbors <- unlist(lapply(1:NS,function(l){ ## incrementing the neighbors by
         nbh.list[[l]]$neighbors+tabS[l]}),use.names=FALSE) ## the size of the previous strata
@@ -147,27 +146,29 @@
     response <- response[neighbors,,drop=FALSE]
   }
   
-
   # bound on the number of unique time points over all strata  
   # --------------------------------------------------------------------
   
   switch(cotype,
-         { size.strata <- NROW(response)
+         { # type=1
+           size.strata <- NROW(response)
            NU <- 1
            if (cens.type!="intervalCensored")
              N <- length(unique(response[,"time"]))
            else
              N <- length(unique(response[,"L"]))
          },
-         {size.strata <- tabulate(Sfactor)
-          N <- NROW(response)
-          NU <- length(size.strata)
-        },
-         { size.strata <- nbh$size.nbh
+         { # type=2
+           size.strata <- tabulate(Sfactor)
+           N <- NROW(response)
+           NU <- length(size.strata)
+         },
+         { # type=3
+           size.strata <- nbh$size.nbh
            N <- sum(size.strata)
            NU <- nbh$nu
          },
-         {
+         { # type=4
            size.strata <- unlist(lapply(nbh.list,function(nbh)nbh$size.nbh),use.names=FALSE)
            N <- sum(size.strata)
            n.unique.strata <- unlist(lapply(nbh.list,function(nbh)nbh$nu),use.names=FALSE)
@@ -180,15 +181,16 @@
   continuous.predictors <- names(covariates$NN)
   discrete.predictors <- names(covariates$strata)
   X <- switch(cotype,
-              NULL,
-              {
+              {#type=1
+                NULL},
+              { #type=2
                 X <- data.frame(unique(covariates$strata[sorted,,drop=FALSE]))
                 ## colnames(X) <- paste("strata",names(covariates$strata),sep=".")
                 # colnames(X) <- names(covariates$strata)
                 rownames(X) <- 1:NROW(X)                
                 X
               },
-              {
+              { #type=3
                 X <- unlist(lapply(nbh.list,function(x)x$values),use.names=FALSE)
                 X <- data.frame(X)
                 ## colnames(X) <- paste("NN",names(covariates$NN),sep=".")
@@ -196,7 +198,7 @@
                 rownames(X) <- 1:NROW(X)                
                 X
               },
-              {
+              { #type=4
                 D <- data.frame(unique(covariates$strata[sorted,,drop=FALSE]))
                 ## colnames(D) <- paste("strata",names(covariates$strata),sep=".")
                 D <- data.frame(D[rep(1:NS,n.unique.strata),,drop=FALSE])
@@ -204,6 +206,11 @@
                 X <- cbind(D,C)
                 ## colnames(X) <- c(paste("strata",names(covariates$strata),sep="."),paste("NN",names(covariates$NN),sep="."))
                 colnames(X) <- c(names(covariates$strata),names(covariates$NN))
+                rownames(X) <- 1:NROW(X)                
+                X
+              },
+              { #type=5
+                X=data.frame(pseudo="pseudo")
                 rownames(X) <- 1:NROW(X)                
                 X
               })
@@ -235,7 +242,7 @@
       }
     }
   }
-  
+
   # find the appropriate C routine
   # --------------------------------------------------------------------
   # with respect to model.type, cens.type, cotype and clustered
@@ -247,19 +254,45 @@
   if (clustered && model.type>1) stop("Cluster-correlated observations only handled for two-state models")
   if (clustered && cotype %in% c(3,4)) stop("Cluster-correlated observations not yet handled in presence of continuous covariates") #cluster <- cluster[neighbors]
   if (cotype>1 && cens.type=="intervalCensored") stop("Interval censored data and covariate strata not yet handled.")
-  
+
   if (model.type==1){
     # two state model
     # --------------------------------------------------------------------
     if (clustered){
-      fit <- .C("prodlim",as.double(response[,"time"]),as.integer(response[,"status"]),integer(0),as.integer(cluster),as.integer(N),integer(0),as.integer(NC),as.integer(NU),as.integer(size.strata),time=double(N),nrisk=double(2*N),nevent=integer(2*N),ncens=integer(N),surv=double(N),cuminc=double(0),hazard=double(N),var.hazard=double(N+N),extra.double=double(2 * max(NC)),extra.long=c(as.integer(max(NC)),integer(2 * max(NC))),ntimes=integer(1),ntimes.strata=integer(NU),first.strata=integer(NU),reverse=integer(0),model=as.integer(0),independent=as.integer(0),PACKAGE="prodlim")
+      fit <- .C("prodlim",
+                as.double(response[,"time"]),
+                as.integer(response[,"status"]),
+                integer(0),
+                as.integer(cluster),
+                as.integer(N),
+                integer(0),
+                as.integer(NC),
+                as.integer(NU),
+                as.integer(size.strata),
+                time=double(N),
+                nrisk=double(2*N),
+                nevent=integer(2*N),
+                ncens=integer(N),
+                surv=double(N),
+                cuminc=double(0),
+                hazard=double(N),
+                var.hazard=double(N+N),
+                extra.double=double(2 * max(NC)),
+                extra.long=c(as.integer(max(NC)),integer(2 * max(NC))),
+                ntimes=integer(1),
+                ntimes.strata=integer(NU),
+                first.strata=integer(NU),
+                reverse=integer(0),
+                model=as.integer(0),
+                independent=as.integer(0),
+                PACKAGE="prodlim")
       NT <- fit$ntimes
       Cout <- list("time"=fit$time[1:NT],"n.risk"=matrix(fit$nrisk,ncol=2,byrow=FALSE,dimnames=list(NULL,c("n.risk","cluster.n.risk")))[1:NT,],"n.event"=matrix(fit$nevent,ncol=2,byrow=FALSE,dimnames=list(NULL,c("n.event","cluster.n.event")))[1:NT,],"n.lost"=fit$ncens[1:NT],"surv"=fit$surv[1:NT],"se.surv"=fit$surv[1:NT]*sqrt(fit$var.hazard[N+(1:NT)]),"naive.se.surv"=fit$surv[1:NT]*sqrt(fit$var.hazard[1:NT]),"hazard"=fit$hazard[1:NT],"first.strata"=fit$first.strata,"size.strata"=fit$ntimes.strata,"model"="survival")
       Cout$maxtime <- max(Cout$time)
     }
     else{
       if (cens.type=="intervalCensored"){
-        Cout <- prodlimIcensSurv(response,grid,tol=tol,maxiter=maxiter,ml=ml)
+        Cout <- prodlimIcensSurv(response,grid,tol=tol,maxiter=maxiter,ml=ml,exact=exact)
       }
       else{
         fit <- .C("prodlim",as.double(response[,"time"]),as.integer(response[,"status"]),integer(0),integer(0),as.integer(N),integer(0),integer(0),as.integer(NU),as.integer(size.strata),time=double(N),nrisk=double(N),nevent=integer(N),ncens=integer(N),surv=double(N),double(0),hazard = double(N),var.hazard=double(N),extra.double=double(0),extra.long=integer(0),ntimes=integer(1),ntimes.strata=integer(NU),first.strata=integer(NU),as.integer(reverse),model=as.integer(0),independent=as.integer(1),PACKAGE="prodlim")
@@ -279,8 +312,15 @@
       NS <- length(unique(E[D!=0])) # number of different causes
       fit <- .C("prodlim",as.double(response[,"time"]),as.integer(D),as.integer(E),integer(0),as.integer(N),as.integer(NS),integer(0),as.integer(NU),as.integer(size.strata),time=double(N),nrisk=double(N),nevent=integer(N * NS),ncens=integer(N),surv=double(N),cuminc=double(N * NS),cause.hazard = double(N * NS),var.hazard=double(N * NS),double(4 * NS),integer(0),ntimes=integer(1),ntimes.strata=integer(NU),first.strata=integer(NU),reverse=integer(0),model=as.integer(1),independent=as.integer(1),PACKAGE="prodlim")
       NT <- fit$ntimes
+      # changed Tue Sep 30 12:51:58 CEST 2008
+      # its easier to work with a list than with a matrix
+      #      gatherC <- function(x,dimR=fit$ntimes,dimC=NS,names=states){
+      #        matrix(x[1:(dimR*dimC)],ncol=dimC,byrow=TRUE,dimnames=list(rep("",dimR),names))
+      #      }
       gatherC <- function(x,dimR=fit$ntimes,dimC=NS,names=states){
-        matrix(x[1:(dimR*dimC)],ncol=dimC,byrow=TRUE,dimnames=list(rep("",dimR),names))
+        out <- split(x[1:(dimR*dimC)],rep(1:NS,dimR))
+        names(out) <- names
+        out
       }
       Cout <- list("time"=fit$time[1:NT],"n.risk"=fit$nrisk[1:NT],"n.event"=gatherC(fit$nevent),"n.lost"=fit$ncens[1:NT],"cuminc"=gatherC(fit$cuminc),"var.cuminc"=gatherC(fit$var.hazard),"se.cuminc"=gatherC(sqrt(fit$var.hazard)),"surv"=fit$surv[1:NT],"cause.hazard"=gatherC(fit$cause.hazard),"first.strata"=fit$first.strata,"size.strata"=fit$ntimes.strata,"model"="competing.risks")
       Cout$maxtime <- max(Cout$time)
@@ -311,8 +351,12 @@
         ## pointwise confidence intervals for cumulative incidence probabilities
         # variance for cuminc (Korn & Dorey (1992), Stat in Med, Vol 11, page 815)
         zval <- qnorm(1- (1-conf.int)/2, 0,1)
-        lower <- pmax(Cout$cuminc - zval * Cout$se.cuminc,0)
-        upper <- pmin(Cout$cuminc + zval * Cout$se.cuminc,1)
+        lower <- lapply(1:NS, function(state){
+          pmax(Cout$cuminc[[state]] - zval * Cout$se.cuminc[[state]],0)})
+        upper <- lapply(1:NS, function(state){
+          pmin(Cout$cuminc[[state]] + zval * Cout$se.cuminc[[state]],1)})
+        names(lower) <- states
+        names(upper) <- states
         Cout <- c(Cout,list(lower=lower,upper=upper))
       }
     }
