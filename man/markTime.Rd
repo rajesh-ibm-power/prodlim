@@ -1,6 +1,6 @@
-\name{MarkTime}
+\name{markTime}
 \Rdversion{1.1}
-\alias{MarkTime}
+\alias{markTime}
 \title{
   Marking product-limit plots at the censored times.
 }
@@ -8,7 +8,7 @@
   This function is invoked and controlled by \code{plot.prodlim}.
 }
 \usage{
-MarkTime(x, times, nlost, pch, col)
+markTime(x, times, nlost, pch, col)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -30,7 +30,7 @@ MarkTime(x, times, nlost, pch, col)
 }
 \details{
     This function should not be called directly. The arguments can be
-  specified as \code{AtRisk.arg} in the call to \code{plot.prodim}.
+  specified as \code{atRisk.arg} in the call to \code{plot.prodim}.
 }
 \value{
   Nil
@@ -40,6 +40,6 @@ Thomas Alexander Gerds <tag@biostat.ku.dk>
 }
 
 \seealso{
-  \code{\link{plot.prodlim}}, \code{\link{ConfInt}}, \code{\link{AtRisk}}
+  \code{\link{plot.prodlim}}, \code{\link{confInt}}, \code{\link{atRisk}}
 }
 \keyword{survival}

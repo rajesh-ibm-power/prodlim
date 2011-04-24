@@ -1,7 +1,5 @@
 "neighborhood" <- function(x,bandwidth=NULL,kernel="box"){
-  
   N <- length(x)
-
   if (N<2) stop("Not enough observations for kernel smoothing.")
   
   orderx <- order(x)
@@ -12,7 +10,6 @@
   cumtabu <- cumsum(tabu)
   cumtabx <- rep(cumtabu,tabu)
   tabx <- rep(tabu,tabu)
-
   if (!length(bandwidth)){ ## need a bandwidth (dpik is from KernSmooth)
     ## require(KernSmooth)
     bandwidth <- dpik(cumtabx/N,kernel="box")

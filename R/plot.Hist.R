@@ -1,577 +1,476 @@
 plot.Hist <- function(x,
-                      layout,
-                      xbox.rule=.3,
-                      ybox.rule=1.5,
-                      state.lab,
-                      state.cex=2,
-                      rect.args,
-                      args.state.lab,
-                      arrow.lab,
-                      arrow.lab.shift,
-                      arrow.lab.offset,
-                      arrow.lab.side=NULL,
-                      arrow.lab.cex=2,
-                      arrow.lab.style,
-                      arrows.args,
-                      arrow.lab.args=NULL,
-                      arrow.head.offset=3,
-                      arrow.double.dist=1,
-                      arrow.fix.code=NULL,
-                      enumerate.boxes=FALSE,
-                      box.numbers,
-                      cex.boxlabs=1.28,
+                      nrow,
+                      ncol,
+                      stateLabels,
+                      arrowLabels,
+                      arrowLabelStyle="symbolic",
+                      arrowLabelSymbol='lambda',
+                      tagBoxes=FALSE,
+                      startCountZero=TRUE,                      
+                      oneFitsAll,
                       margin,
+                      cex,
                       verbose=FALSE,
-                      reverse,
                       ...){
-  # symetric frame
-  # --------------------------------------------------------------------
-  
+  # {{{ margin 
   oldmar <- par()$mar
+  oldoma <- par()$oma
+  par(oma=c(0,0,0,0))
   oldxpd <- par()$xpd
-  if (!missing(margin))
-    par(mar=margin,xpd=TRUE)
+  if (!missing(margin)){
+    par(mar=rep(margin,length.out=4),xpd=TRUE)
+  }
   else
-    par(mar=c(2,2,2,2),xpd=TRUE)
-  
-  # find states and labels for the boxes
-  # --------------------------------------------------------------------
-  
+    par(mar=c(0,0,0,0),xpd=TRUE)
+  # }}}
+  # {{{ find states 
+
   model.type <- attr(x,"model")
   states <- attr(x,"states")
-  #  FIXME: this should be solved in summary.Hist instead
-  sumx <- summary(x,verbose=FALSE)
+  origStates <- states
+  if (model.type!="multi.states"){ ## need an initial state
+    states <- c("initial", states)
+  }
+  NS <- length(states)
+  if (missing(stateLabels)){
+    if (all(as.character(as.numeric(as.factor(origStates)))==origStates))  ## make nice state boxlabels if states are integers
+      stateLabs <- switch(model.type,"survival"=paste(c("","Event"),states),"competing.risks"=paste(c("",rep("Cause",NS-1)),states),paste("State",states))
+    else
+      stateLabs <- states
+  }
+  else{
+    if(length(stateLabels)==NS-1){
+      stateLabs <- c("initial",stateLabels)
+    }
+    else{
+      if (length(stateLabels)==NS){
+        stateLabs <- stateLabels
+      }
+      else{
+        stop("Wrong number of state names.")
+      }
+    }
+  }
+  ## forcedLabels
+  thecall <- match.call(expand=TRUE)
+  labelhits <- match(paste("box",1:NS,".label",sep=""),names(thecall),nomatch=0)
+  for (i in 1:NS){
+    if (labelhits[i]!=0)
+      ## may be language: thecall[[labelhits[i]]]
+      ## if user specifies box2.label=c("Event 1")
+      ## instead of box2.label="Event 1"
+      stateLabs[i] <- eval(thecall[[labelhits[i]]])[1]
+  }
+  numstates <- as.numeric(as.character(factor(states,levels=states,labels=1:NS)))
+  startCountZero <- TRUE 
+  if (startCountZero)
+    numstateLabels <- numstates-1
+  else
+    numstateLabels <- numstates
+  # {{{  find transitions between the states
+  
+  ## first remove the censored lines from the transition matrix
+  ## x <- x[x[,"status"]!=attr(x,"cens.code"),,drop=FALSE]
+  x <- x[x[,"status"]!=0,,drop=FALSE]
+  if (NROW(x)==0) stop("No uncensored transitions.")
+  sumx <- summary(x,verbose=verbose)
   notCensored <- sumx$trans.frame$to!="unknown"
   sumx$trans.frame <- sumx$trans.frame[notCensored,]
   sumx$transitions <- sumx$transitions[notCensored]
-  NS <- length(states)
-  if (all(as.character(as.numeric(as.factor(states)))==states))
-    states <- paste(switch(model.type,"survival"="Event","competing.risks"="Cause","State"),states)
-  x <- x[x[,"status"]!=attr(x,"cens.code"),,drop=FALSE]
-  if (NROW(x)==0) stop("No uncensored transition.")
-  
-  if (missing(reverse)) reverse <- FALSE
-  ##     reverse <- ifelse(model.type=="competing.risks",TRUE,FALSE)
-  
-  if (!missing(state.lab)){
-    if (model.type!="multi.states"){## maybe add an initial state
-      if (length(state.lab)==NS){
-        states <- c("Initial",if(reverse) rev(state.lab) else state.lab)
-        NS <- length(states)
-      }
-      else
-        if(length(state.lab)-1==NS){
-          states <- state.lab
-          NS <- length(states)
-          if (reverse==TRUE) states <- c(states[1],rev(states[-1]))
-        }
-        else stop("Wrong number of state names.")
-    }
-    else{
-      if (length(state.lab)==NS){
-        states <- state.lab
-        if (reverse==TRUE) states <- rev(states) 
-      }
-      else
-        stop("Wrong number of state names.")
-    }
-  }
-  else{
-    if (model.type!="multi.states"){## add an initial state
-      states <- c("Initial",if(reverse) rev(states) else states)
-      NS <- length(states)
-    }
-  }
+  transitions <- sumx$trans.frame
+  ordered.transitions <- unique(transitions)
+  N <- NROW(ordered.transitions)
 
-  # find transitions between the states
-  # --------------------------------------------------------------------
-  
-  if (model.type=="multi.states"){  
-    
-    ## `from' and `to' originate from
-    ## factors with levels cens.code,states
-    ## and are now integer valued 1 for censored
-    ## and 2,..., NS otherwise
-    ## thus we have to start counting from 2
-    if (!missing(state.lab) || is.null(transitions <- sumx$trans.frame)){
-      transitions <- data.frame(x[,c("from","to")]) 
-      ## print(unique(transitions))
-      transitions$from <- factor(transitions$from)
-      levels(transitions$from) <- states[as.numeric(levels(transitions$from))-1]
-      transitions$to <- factor(transitions$to)
-      levels(transitions$to) <- states[as.numeric(levels(transitions$to))-1]
-      ordered.transitions <- unique(transitions)
-      ## print(ordered.transitions)
-      ## stop()
-    }
-    else{
-      ordered.transitions <- transitions
-    }
-  }
-  else{
-    if (model.type=="survival")
-      transitions <- table(x[,"status"])
+  # }}}
+
+  # }}}
+  # {{{ default layout: arranging the boxes
+
+  state.types <- sumx$states
+  state.types <- state.types[state.types>0]
+  if (missing(nrow))
+    if (model.type=="multi.states")
+      nrow <- NS
     else
-      transitions <- table(x[,"event"][x[,"status"]!=0])
-    ordered.transitions <- data.frame(cbind(rep(states[1],length(states[-1])),states[-1]))
-  }
-  names(ordered.transitions) <- c("from","to")
-  
-  # arranging the boxes
-  # --------------------------------------------------------------------
-  
-  if (missing(layout)){
-    if (model.type=="multi.states"){
-      # sumx <- summary(x,verbose=FALSE)
-      state.types <- unlist(sumx$states)
-      state.types <- state.types[state.types>0]
-      if (NS==3 && all(unlist(state.types)==1)){ # illness-death-model
-        auto.col <- rep(FALSE,3)
-        box.row <- c(3,1,3)
-        box.col <- c(1,2,3)
-        nrow <- 3
-        ncol <- 3
-      }
-      else{
-        ncol <- length(state.types)
-        nrow <- max(state.types)
-        auto.col <- rep(TRUE,ncol)
-        box.col <- rep(1:ncol,state.types)
-        box.row <- unlist(sapply(state.types,function(x)1:x))
-        ## print(box.row)
-      }
-    }
-    else{
-      state.types <- list(initial=1,absorbing=NS-1)
+      if (ceiling(NS/2)==floor(NS/2))
+        nrow <- NS-1
+      else
+        nrow <- NS
+  if (missing(ncol))
+    if (model.type=="multi.states")
+      ncol <- NS
+    else
       ncol <- 2
-      nrow <- max(unlist(state.types))
-      auto.col <- c(TRUE,TRUE)
-      box.row <- c(1,1:state.types$absorbing)
-      box.col <- c(1,rep(2,state.types$absorbing))
+  ## placing boxes in rows and columns
+  if (model.type=="multi.states"){
+    adjustRowsInColumn <- rep(0,ncol)
+    adjustColsInRow <- rep(0,nrow)
+    box.col <- switch(as.character(NS),"2"=c(1,ncol),"3"=c(1,2,ncol),"4"=c(1,1,ncol,ncol),"5"=c(1,1,ceiling((ncol-1)/2),ncol,ncol))
+    box.row <- switch(as.character(NS),"2"=c(1,1),"3"=c(nrow,1,nrow),"4"=c(1,nrow,1,nrow),"5"=c(1,nrow,ceiling(nrow/2),1,nrow))
+  }
+  else{ # survival or competing risks
+    ## adjustRowsInColumn <- rep(1,ncol)
+    ## adjustColsInRow <- rep(1,nrow)
+    if (ceiling(NS/2)==floor(NS/2)){ ## equal number of states and unequal number of absorbing states
+      box.col <- c(1,rep(ncol,NS-1))
+      box.row <- c(NS/2,1:(NS-1))
+    } else{ 
+      box.col <- c(1,rep(ncol,NS-1))
+      box.row <- c((NS+1)/2,(1:NS)[-(NS+1)/2])
     }
   }
-  else{
-    if (!(is.list(layout) && all(match(c("nrow","ncol","box.pos"),names(layout),nomatch=FALSE))))
-        stop("The argument layout must be a list with the elements nrow,ncol,box.pos. See help(plot.Hist).")
-    nrow <- layout$nrow
-    ncol <- layout$ncol
-    box.row <- sapply(layout$box.pos,function(x)x[1])
-    box.col <- sapply(layout$box.pos,function(x)x[2])
-    #    box.col <- layout$box.col
-    auto.col <- layout$auto.col
-    if (is.null(auto.col))
-      auto.col <- rep(FALSE,ncol)
-  }
-  
-  ##   print(ordered.transitions)
-  
-  # plot an empty frame
-  # --------------------------------------------------------------------
-  
+  layoutDefaults <- data.frame(name=paste("box",1:NS,sep=""),
+                               row=box.row,
+                               column=box.col,
+                               stringsAsFactors=FALSE)
+  layoutDefaultList <- lapply(1:NS,function(x)layoutDefaults[x,-1,drop=FALSE])
+  names(layoutDefaultList) <- layoutDefaults$name
+  layout <- SmartControl(list(...),
+                         keys=c(layoutDefaults$name),
+                         defaults=c(layoutDefaultList),
+                         ignore.case=TRUE,
+                         replaceDefaults=FALSE,
+                         verbose=verbose)
+
+  # }}}
+  # {{{ draw empty frame
+  # plot
   Xlim <- 100
   Ylim <- 100
   plot(0,0,type="n",xlim=c(0,Xlim),ylim=c(0,Ylim),xlab="",ylab="",axes=FALSE)
-  
-  # fixed size boxes
-  # --------------------------------------------------------------------
+  ## backGround(c(0,100),c(0,100),bg="yellow")
 
-  state.width <- sapply(states,strwidth,cex=state.cex)
-  max.width <- max(state.width)
-  state.height <- sapply(states,strheight,cex=state.cex)
-  max.height <- max(state.height)
-  box.width <- max.width + xbox.rule * max.width
-  
-  if ((ncol * box.width) > Xlim) warning("The horizontal dimension of the boxes is too big -- change parameters `state.cex' and/or `xbox.rule'.")
-  
-  box.height <- max.height + ybox.rule * max.height
-  
-  if ((nrow * box.height) > Ylim)
-    warning("The vertical dimension of the boxes is too big -- change parameters `state.cex' and/or `ybox.rule'.")
-  
-  # position of boxes
-  # --------------------------------------------------------------------
+  # }}}
+  # {{{ default values
 
-  ## distribute the boxes uniformly 
-  position.finder <- function(border,len,n){
-    if (n==1)
-      (border - len)/2
-    else{
-      seq(0,border-.5*len,len + (border-(n * len))/(n-1))
-    }
-  }
+  if (missing(cex))
+    theCex <- 2
+  else
+    theCex <- cex
+  arrowLabel.cex <- rep(theCex,N)
   
-  ##   ybox.position <- unlist(lapply(state.types,position.finder,border=Ylim,len=box.height))
-  ##   ybox.position <- unlist(lapply(1:ncol,position.finder,border=Ylim,len=box.height))
-  ##   ybox.position <- rep(position.finder(Ylim,box.height,nrow),NS)
+  ## boxes
+  boxDefaults <- data.frame(name=paste("box",1:NS,sep=""),xpd=TRUE,stringsAsFactors=FALSE)
+  ## box labels
+  boxLabelDefaults <- data.frame(name=paste("label",1:NS,sep=""),stringsAsFactors=FALSE,label=stateLabs)
+  ## arrows
+  arrowDefaults <- data.frame(name=paste("arrow",1:N,sep=""),code=2,lwd=1,headoffset=strwidth("ab",cex=arrowLabel.cex),length=.13,stringsAsFactors=FALSE)
+  arrowDefaults <- cbind(arrowDefaults,ordered.transitions)
+  ## arrowlabels
+  arrowlabelDefaults <- data.frame(name=paste("arrowlabel",1:N,sep=""),label=arrowLabelStyle,x=NA,y=NA,stringsAsFactors=FALSE,cex=arrowLabel.cex)
+  arrowlabelDefaults <- cbind(arrowlabelDefaults,ordered.transitions)
 
-  Ypossible <- lapply(1:ncol,function(gc){
-    if(auto.col[gc]>0)
-      rev(position.finder(Ylim,box.height,sum(box.col==gc)))
-    else rev(position.finder(Ylim,box.height,nrow))
-  })
-  
-  ybox.position <- sapply(1:NS,function(s){
-    Ypossible[[box.col[s]]][box.row[s]]
-  })
-  
-  
-  ##   if (NS==3 && length(grep("transient",names(state.types)))>0){ # illness-death-model
-  ##     ybox.position <- c(0,Ylim-box.height,0)
-  ##   }
-  Xpossible <- position.finder(border=Xlim,len=box.width,n=ncol)
-  xbox.position <- sapply(1:NS,function(s){
-    Xpossible[box.col[s]]
-  })
-  ##   print(xbox.position)  
-  ##   xbox.position <- rep(position.finder(border=Xlim,len=box.width,n=ncol),state.types)
-  ##   print(ybox.position)
-  ##   print(xbox.position)
-  
-  
-  # draw the boxes
-  # --------------------------------------------------------------------
-
-  rect.args.defaults <- list(xpd=TRUE)
-  if (missing(rect.args)) rect.args <- c(list(xleft=xbox.position,ybottom=ybox.position,xright=xbox.position+box.width,ytop=ybox.position+box.height),rect.args.defaults)
-  else rect.args <- c(list(xleft=xbox.position,ybottom=ybox.position,xright=xbox.position+box.width,ytop=ybox.position+box.height),rect.args,rect.args.defaults)
-  rect.args <- rect.args[!duplicated(names(rect.args))]
-  do.call("rect",rect.args)
-  
-  # center the  text in boxes
-  # --------------------------------------------------------------------
-
-  xtext.position <- xbox.position + (box.width - state.width)/2
-  ytext.position <- ybox.position + (box.height - state.height)/2
-  
-  if (missing(args.state.lab)) {
-    args.state.lab <- list(x=xtext.position,y=ytext.position,labels=states,adj=c(0,0),cex=state.cex)
+  arrowlabelDefaults$numfrom <- factor(arrowlabelDefaults$from,levels=states,labels=numstateLabels)
+  arrowlabelDefaults$numto <- factor(arrowlabelDefaults$to,levels=states,labels=numstateLabels)
+  if (missing(arrowLabels)){
+    arrowLabels <- NULL
   }
-  else {
-    args.state.lab <- c(list(x=xtext.position,y=ytext.position,labels=states,adj=c(0,0),cex=state.cex),args.state.lab)
-    args.state.lab <- args.state.lab[!duplicated(args.state.lab)]
-  }
-  do.call("text",args.state.lab)
-  
-  # maybe put numbers in the upper left corner of the boxes
-  # --------------------------------------------------------------------
-  
-  if (enumerate.boxes==TRUE){
-    if (missing(box.numbers)) {
-      if (reverse)
-        box.numbers <- c(0,rev(1:(length(xbox.position)-1)))
-      else
-        box.numbers <- 0:(length(xbox.position)-1)
-    }
-    nix <- lapply(1:length(xbox.position),function(x) {
-      lab <- box.numbers[x]
-      text(x=xbox.position[x],
-           y=ybox.position[x]+box.height,
-           labels=lab,
-           cex=cex.boxlabs,
-           adj=c(-.5,1.43))})
-  }
-  
-  if (verbose==TRUE) {
-    print(data.frame(cbind(xbox.position,ybox.position,states)))
-  }
-  
-  # find default arg values and labs for the arrows
-  # --------------------------------------------------------------------
-  ## print(arrows.args.defaults)
-
-  N <- NROW(ordered.transitions)
-  doubleArrow <- match(paste(ordered.transitions[,"to"],ordered.transitions[,"from"]),
-                     paste(ordered.transitions[,"from"],ordered.transitions[,"to"]),nomatch=0)
-  ordered.transitions <- cbind(ordered.transitions,doubleArrow)
-  ##   print(ordered.transitions)
-  if (missing(arrows.args)) arrows.args <- list()
-  arrows.args.defaults <- list(lwd=2)
-  
-  if (!missing(arrows.args) && length(arrows.args)>0){
-    arrows.args <- c(arrows.args,arrows.args.defaults)
-    arrows.args <- arrows.args[!duplicated(names(arrows.args))]
-  }
-  else arrows.args <- arrows.args.defaults
-
-  ## Added Fri Jun 20 20:01:56 CEST 2008
-  ## Fixed again Thu Oct 02 04:01:19 CEST 2008
-  if (!missing(arrow.lab) && is.logical(arrow.lab) && arrow.lab==FALSE){
-    arrow.lab.style <- "character"
-    arrow.lab <- rep("",N)
-  }
-  ## Added Fri Jun 20 20:01:56 CEST 2008
-  
-    if (missing(arrow.lab.style))
-      arrow.lab.style <- if (missing(arrow.lab)) "symbolic" else "character"
-  arrow.lab.style <- match.arg(arrow.lab.style,c("symbolic","character","count","none"))
-  if (arrow.lab.style=="character")
-    if (missing(arrow.lab)) arrow.lab <- rep("",N)
-    else
-      if (length(arrow.lab)!=N) stop(paste("Number of arrow labels and the number of arrows dont match. Provide",N,"labels"))
-  if (arrow.lab.style=="count"){
-    ##     arrow.lab <- paste("n=",as.numeric(transitions),sep="")
-    arrow.lab <- as.numeric(transitions)
-  }
-  if (arrow.lab.style!="none"){
-    if (missing(arrow.lab.shift))
-      arrow.lab.shift <- rep(0,N)
-    arrow.lab <- lapply(1:N,function(trans){
-      from.state <- match(ordered.transitions[trans,1],states)
-      to.state <- match(ordered.transitions[trans,2],states)
-      if (arrow.lab.style=="symbolic")
-        lab <- bquote(alpha[.(paste(from.state-1,to.state-1,sep=""))](t))
-      else
-        lab <- arrow.lab[trans]
-      lab
-    })
-    if (reverse) arrow.lab <- rev(arrow.lab)
-  }
-
-  ## ------------------------------------------------------------- ##
-  ## the default offset is computed as the string width and height ##
-  ## of the labels                                                 ##
-  ## ------------------------------------------------------------- ##
-  if (!missing(arrow.lab.offset)){
-    if (length(arrow.lab.offset)==1)
-      arrow.lab.offset <- rep(arrow.lab.offset,N)
-    else
-      if(length(arrow.lab.offset)!=N)
-        stop(paste("Length of arrow.lab.offset unequal to the no. of arrows which is",N))
+  arrowLabels.p <- TRUE
+  if (length(arrowLabels)>0 &&is.logical(arrowLabels) && arrowLabels==FALSE){
+    arrowLabels <- rep("",1:N)
+    arrowLabels.p <- FALSE
   }
   else{
-    arrow.lab.offset <- lapply(1:N,function(trans){
-      c(strwidth(arrow.lab[[trans]],cex=arrow.lab.cex),
-        strheight(arrow.lab[[trans]],cex=arrow.lab.cex))
-    })
+    if (length(arrowLabels)==0){
+      arrowLabels <- lapply(1:N,function(i){
+        bquote(paste(expression(.(as.name(arrowLabelSymbol))[.(paste(as.character(arrowlabelDefaults$numfrom[i]),
+            as.character(arrowlabelDefaults$numto[i]),
+            sep=""))](t))))
+      })
+    } else{
+      stopifnot(length(arrowLabels)==N)
+    }
   }
-  
-  # draw the arrows
-  # --------------------------------------------------------------------
-
-  arrow.pos <- lapply(1:N,function(trans){
-    from.state <- match(ordered.transitions[trans,1],states)
-    to.state <- match(ordered.transitions[trans,2],states)
-    
-    ## print(c(from.state,to.state))
-    ## print(list(Box1=c(round(xbox.position[from.state],4),round(ybox.position[from.state],4)),Box2=c(round(xbox.position[to.state],4),round(ybox.position[to.state],4)),BoxDim=c(box.width,box.height),offset=arrow.head.offset,verbose=verbose))
-    Apos <- findArrow(Box1=c(round(xbox.position[from.state],4),round(ybox.position[from.state],4)),Box2=c(round(xbox.position[to.state],4),round(ybox.position[to.state],4)),BoxDim=c(box.width,box.height),offset=arrow.head.offset,verbose=verbose)
-    dir <- attr(Apos,"direction")
-    names(Apos) <- c("x0","y0","x1","y1")
-    if (Apos[1]==Apos[3]){ # vertical arrow
-      x1 <- Apos[1]
-      x2 <- Apos[3]
-      if (Apos[2]<Apos[4]) {
-        y1 <- Apos[2] + arrow.head.offset
-        y2 <- Apos[4] - arrow.head.offset
-      }
-      else{
-        y1 <- Apos[2] - arrow.head.offset
-        y2 <- Apos[4] + arrow.head.offset
-      }
+  arrowlabelhits <- match(paste("arrow",1:N,".label",sep=""),names(thecall),nomatch=0)
+  for (i in 1:N){
+    if (arrowlabelhits[i]!=0){
+      arrowLabels[[i]] <- thecall[[arrowlabelhits[i]]]
     }
-    else{
-      thisform <- function(x,y){
-        (y[4]-y[2])*x/(y[3]-y[1])-(y[4]-y[2])*y[1]/(y[3]-y[1])+y[2]
-      }
-      x1 <- Apos[1] + arrow.head.offset
-      x2 <- Apos[3] - arrow.head.offset
-      y1 <- thisform(x=x1,y=Apos)
-      y2 <- thisform(x=x2,y=Apos)
-    }
-    Apos <- c(x1,y1,x2,y2)
-    names(Apos) <- c("x0","y0","x1","y1")
-    list(Apos=Apos,ADirection=dir)
-  })
-  arrow.dir <- sapply(arrow.pos,function(x)x$ADirection)
-  arrow.pos <- data.frame(do.call("rbind",lapply(arrow.pos,function(x)x$Apos)))
-  if (verbose==TRUE) {
-    cat("\n")
-    print(cbind(ordered.transitions,"Arrow.pos"=arrow.pos))
-    cat("\n")
   }
 
-  ordered.transitions <- cbind(ordered.transitions,arrow.pos)
+  # }}}
+  # {{{ compute box dimensions relative to cex of box labels
+
+  ## to find the cex for the box labels, first initialize
+  boxLabelCex <- rep(theCex,NS)
+  ## then look for label.cex
+  if (theLabelCex <- match("label.cex",names(thecall),nomatch=0)){
+    boxLabelCex <- rep(thecall[[theLabelCex]],NS)
+  }
+  # finally adjust for box individual values 
+  if (any(iLabelCex <- match(paste("label",1:NS,".cex",sep=""),names(thecall),nomatch=0))){
+    for (i in 1:NS){
+      if ((argi <- iLabelCex[i])!=0)
+        boxLabelCex[i] <- thecall[[argi]]
+    }
+  }
   
-  if (missing(arrow.double.dist)) arrow.double.dist <- NULL
-
-  # draw the arrows and the labels
-  # --------------------------------------------------------------------
-  drawarrows <- lapply(1:N,function(trans){
-    acode <- if (arrow.dir[trans]==2 && ordered.transitions[trans,"doubleArrow"]==0) 1 else 2
-    dd <- ordered.transitions[trans,"doubleArrow"]
-
-    # modify the arrow coordinates in case of  <==>
-    # --------------------------------------------------------------------
-    if (dd!=0)
-      if (is.null(arrow.double.dist))
-        dist <- strwidth("a",cex=arrow.lab.cex)
-      else dist <- arrow.double.dist
-    else
-      dist <- 0
-    if (dd==2)
-      if (dist==0)
-        acode <- 3
-      else
-        acode <- 1
-    apos <- ordered.transitions[trans,c("x0","y0","x1","y1"),drop=FALSE]
-    if (dist>0)
-      if (abs(apos$x1-apos$x0) < abs(apos$y1-apos$y0)){
-        if (dd==2) {
-          if ((apos$x0+apos$x1)<=Xlim){ ## left side of the figure
-            apos <- apos + c(dist,0,dist,0)
-          }
-          else{
-            apos <- apos - c(dist,0,dist,0)
-          }
-        }
-        else{
-          if (dd==1){
-            if ((apos$x0+apos$x1)<=Xlim){ ## left side of the figure
-              apos <- apos - c(dist,0,dist,0)
-            }
-            else{
-              apos <- apos + c(dist,0,dist,0)
-            }
-          }
-        }
+  ## state.cex <- max(boxLabelCex)
+  state.width <- sapply(stateLabs,strwidth,cex=boxLabelCex)
+  state.height <- sapply(stateLabs,strheight,cex=boxLabelCex)
+  
+  if (missing(oneFitsAll))
+    oneFitsAll <- length(unique(boxLabelCex))==1
+  if (oneFitsAll==TRUE){
+    max.width <- max(state.width)
+    max.height <- max(state.height)
+    ##     box.width <- max.width + xbox.rule * max.width
+    ##     box.height <- max.height + ybox.rule * max.height
+    box.width <- max.width + strwidth("ab",cex=max(boxLabelCex))
+    box.height <- max.height + strwidth("ab",cex=max(boxLabelCex))
+    ## really need to check this for each row:
+    ##     if ((ncol * box.width) > Xlim) warning("The horizontal dimensions of the boxes are too big -- change layout or tune parameters `label.cex' and/or `xbox.rule'.")
+    ##     if ((nrow * box.height) > Ylim) warning("The verticalf dimensions of the boxes are too big -- change layout or tune parameters `label.cex' and/or `ybox.rule'.")
+  }
+  else{
+    box.width <- state.width + strwidth("ab",cex=boxLabelCex)
+    box.height <- state.height + strwidth("ab",cex=boxLabelCex)
+  }
+  if (length(box.height)==1) box.height <- rep(box.height,NS)
+  if (length(box.width)==1) box.width <- rep(box.width,NS)
+  # }}}
+  # {{{ arrange the boxes in the layout
+  boxCol <- sapply(layout,function(x){x$column})
+  if (any(boxCol>ncol)) ncol <- max(boxCol)
+  boxRow <- sapply(layout,function(x){x$row})
+  if (any(boxRow>ncol)) nrow <- max(boxRow)
+  ybox.position <- numeric(NS)
+  names(ybox.position) <- paste("box",numstates,sep="")
+  # {{{y box positions
+  for (x in 1:ncol){
+    ## For each column find y positions for boxes
+    boxesInColumn <- names(boxCol)[boxCol==x]
+    boxesInColumnNumbers <- as.numeric(sapply(strsplit(boxesInColumn,"box"),function(x)x[[2]]))
+    if (length(boxesInColumn)>0){
+      ## if (adjustRowsInColumn[x]==1 && all(match(paste(boxesInColumn,"row",sep="."),names(thecall),nomatch=0)==0)){
+      # adjust the y position of the boxes according to the number of boxes in column
+      ## yPossible <- centerBoxes(Ylim,box.height[boxesInColumnNumbers],nrow,boxRow[boxesInColumn])
+      ## for (b in 1:length(boxesInColumn))
+      ## ybox.position[boxesInColumn[b]] <- yPossible[b]
+      ## }
+      ## else{
+      yPossible <- centerBoxes(Ylim,box.height[boxesInColumnNumbers],nrow,boxRow[boxesInColumn])
+      for (b in 1:length(boxesInColumn)){
+        ybox.position[boxesInColumn[b]] <- yPossible[b]
+        ## }
+      }
+    }
+  }
+  ## row 1 is on top but the y-axis starts at the button
+  ## therefore need to transform
+  ybox.position <- 100-(ybox.position+box.height)
+  # }}}
+  # {{{x box positions
+  xbox.position <- numeric(NS)
+  names(xbox.position) <- paste("box",numstates,sep="")
+  for (x in 1:nrow){
+    ## For each row find x positions for boxes
+    boxesInRow <- names(boxRow)[boxRow==x]
+    boxesInRowNumbers <- as.numeric(sapply(strsplit(boxesInRow,"box"),function(x)x[[2]]))
+    if (length(boxesInRow)>0){
+      ## if (adjustColsInRow[x]==1 && all(match(paste(boxesInRow,"row",sep="."),names(thecall),nomatch=0)==0)){
+      # adjust the x position of the boxes according to the number of boxes in row
+      ## xpossible <- centerBoxes(Ylim,box.height[boxesInRowNumbers],ncol,boxCol[boxesInRow])
+      ## for (b in 1:length(boxesInRow))
+      ## xbox.position[boxesInRow[b]] <- xpossible[b]
+      ## }
+      ## else{
+      xpossible <- centerBoxes(Ylim,box.width[boxesInRowNumbers],ncol,boxCol[boxesInRow])
+      for (b in 1:length(boxesInRow)){
+        xbox.position[boxesInRow[b]] <- xpossible[b]
+      }
+      ## }
+    }
+  }
+  # }}}
+  xtext.position <- xbox.position + (box.width - state.width)/2
+  ytext.position <- ybox.position + (box.height - state.height)/2
+  if (verbose)
+    print(cbind(boxCol,boxRow,xbox.position,ybox.position,box.width,state.width,state.height,boxLabelCex))
+  boxDefaults <- cbind(boxDefaults,xleft=xbox.position,ybottom=ybox.position,xright=xbox.position+box.width,ytop=ybox.position+box.height)
+  boxLabelDefaults <- cbind(boxLabelDefaults,
+                            x=xtext.position,
+                            y=ytext.position,
+                            cex=boxLabelCex)
+  # }}}
+  # {{{ compute arrow positions
+  doubleArrow <- match(paste(arrowDefaults[,"to"],arrowDefaults[,"from"]),paste(arrowDefaults[,"from"],arrowDefaults[,"to"]),nomatch=0)
+  arrowDefaults <- cbind(arrowDefaults,doubleArrow)
+  arrowList <- for (trans in 1:N){
+    from.state <- factor(ordered.transitions[trans,1],levels=states,labels=numstates)
+    to.state <- factor(ordered.transitions[trans,2],levels=states,labels=numstates)
+    ArrowPositions <- findArrow(Box1=c(round(xbox.position[from.state],4),round(ybox.position[from.state],4)),
+                                Box2=c(round(xbox.position[to.state],4),round(ybox.position[to.state],4)),
+                                Box1Dim=c(box.width[from.state],box.height[from.state]),
+                                Box2Dim=c(box.width[to.state],box.height[to.state]),
+                                verbose=verbose)
+    Len <- function(x){sqrt(sum(x^2))}
+    from <- ArrowPositions$from
+    to <- ArrowPositions$to
+    ArrowDirection <- to-from
+    ArrowDirection <- ArrowDirection/Len(ArrowDirection)
+    ## perpendicular direction
+    PerDir <- rev(ArrowDirection)*c(1,-1)/Len(ArrowDirection)
+    ## shift double arrows
+    dd <- arrowDefaults[trans,"doubleArrow"]
+    if (dd!=0){
+      dist <- strwidth(".",cex=arrowLabel.cex)
+      arrowDefaults[trans,"headoffset"]+dist
+      if (dd>trans){
+        from <- from + sign(PerDir) * c(dist,dist)
+        to <- to + sign(PerDir) * c(dist,dist)
       }
       else{
-        if (dd==2){
-          apos <- apos + c(0,dist,0,dist)
-        }
-        else{ if (dd==1){
-          apos <- apos - c(0,dist,0,dist)
-        }}}
-    
-    ##     print(c(apos,c(arrows.args,code=acode)))
-    if (!is.null(arrow.fix.code))
-      acode <- arrow.fix.code[trans]
-    ##       if (length(arrow.lab)!=N) stop(paste("Number of arrow labels and the number of arrows dont match. Provide",N,"labels"))
-    do.call("arrows",c(apos,c(arrows.args,code=acode)))
-    off <- arrow.lab.offset[[trans]]
-    slope <- function(x,y,a,b){(y-b)/(x-a)}
-    S <- slope(apos$x0,apos$y0,apos$x1,apos$y1)
-    if (is.na(S)) S <- Inf
-    amid <- c(unlist(apos[c(1,2)],use.names=FALSE)+unlist(apos[c(3,4)],use.names=FALSE))/2
-    shift <- arrow.lab.shift[trans]
-    amid <- c(amid[1]+shift,amid[2]+ifelse(is.infinite(S),1,S)*shift)
-    # place the lab
-    # --------------------------------------------------------------------
-    ## 
-    ##       q1     |     q2
-    ##              |
-    ##     ---------|-----------
-    ##              |
-    ##       q4     |     q3
-    
-    q1 <- c(-1,1)
-    q2 <- c(1,1)
-    q3 <- c(1,-1)
-    q4 <- c(-1,-1)
-    
-    ##     print(acode)
-    ##     print(S)
-    Q <- if (amid[1]<=Xlim/2 && amid[2]<Ylim/2) 4
-    else if (amid[1]<=Xlim/2 && amid[2]>=Ylim/2) 1
-    else if (amid[1]>Xlim/2 && amid[2]<Ylim/2) 3
-    else 2 ## (amid[1]>Xlim/2 && amid[2]>=Ylim/2)
-    
-    ## print(paste("Q=",Q))
-    ##     corners <- cbind(xbox.position,ybox.position)
-    ##     D <- apply(corners,1,function(box){slope(amid[1],amid[2],box[1],box[2])})
-    if (acode==2){
-      if (is.infinite(S)) sign <- switch(Q,q1,q2,q2,q1)
-      else if (S==0) sign <- switch(Q,q1,q2,q3,q4)
-      else if (NS==2) if (S<0) sign <- q2 else sign <- q1
-      else if (Q==1) if (S<0) sign <- q2 else sign <- q3
-      else if (Q==2) if (S<0) sign <- q4 else sign <- q1
-      else if (Q==3) if (S<0) sign <- q4 else sign <- q1
-      else if (Q==4) if (S<0) sign <- q4 else sign <- q1
-    }
-    else{
-      if (is.infinite(S)) sign <- switch(Q,q2,q1,q1,q2)
-      else if (S==0) sign <- switch(Q,q3,q4,q1,q2)
-      else if (NS==2) if (S<0) sign <- q1 else sign <- q3
-      else if (Q==1) if (S<0) sign <- q2 else sign <- q1
-      else if (Q==2) if (S<0) sign <- q2 else sign <- q3
-      else if (Q==3) if (S<0) sign <- q2 else sign <- q3
-      else if (Q==4) if (S<0) sign <- q2 else sign <- q3 
-    }
-    if (is.null(arrow.lab.side) || is.na(arrow.lab.side[trans]))
-      as <- 1 else as <- arrow.lab.side[trans]
-    ## if (acode==1) sign <- -1*sign
-    sign <- as*sign
-    ##          abline(h=Xlim/2)
-    ##          abline(v=Ylim/2)
-    ##     print(S)
-    ##     points(x=amid[1],y=amid[2])
-    ##     off <- off
-    if (S==0){
-      ## sign <- c(ifelse(amid[1]<Xlim/2,-1,1),ifelse(amid[2]<Ylim/2,-1,1))
-      if (verbose) print("horizontal")
-      xy <- amid + sign*c(0,1)*(off-dist)
-    }
-    else{
-      ## sign <- c(ifelse(amid[1]<Xlim/2,-1,1),ifelse(amid[2]<Ylim/2,-1,1))
-      if (is.infinite(S)){
-        if (verbose) print("vertical")
-        xy <- amid + sign*c(1,0)*(off-dist)
-      }
-      else{
-        if (S<0){
-          S <- -S
-          if (S>1){
-            if (verbose) print("down steep")
-            ##             if (acode==2)
-            ##               sign <- c(1,1)
-            ##             else
-            ##               sign <- c(-1,-1)
-            xy <- amid + sign*c(1/S, 1)*(off-dist)
-          }
-          else{
-            if (verbose) print("down not steep")
-            ##             if(match(ordered.transitions[trans,"from"],states,nomatch=0)==1)
-            ##               sign <- c(-1,-1)
-            ##             else
-            ##               sign <- c(1,1)
-            xy <- amid + sign*c(S,1)*(off-dist)
-          }
-        }
-        else{
-          if (S>0)
-            if (S>1){
-              if (verbose) print("up steep")
-              ##               if (acode==2)
-              ##                 sign <- c(-1,-1)
-              ##               else
-              ##                 sign <- c(1,1)
-              xy <- amid + sign*c(1/S,1)*(off-dist)
-            }
-            else{
-              if (verbose) print("up not steep")
-              ##               if (acode==2) sign <- c(1,-1)
-              ##               else sign <- c(-1,1)
-              xy <- amid + sign*c(S,1)*(off-dist)
-            }
-        }
+        from <- from + sign(PerDir) * c(dist,dist)
+        to <- to + sign(PerDir) * c(dist,dist)
       }
     }
-    ## print(xy)
-    if (is.null(arrow.lab.args)) arrow.lab.args <- list(x=xy[1],
-                                                        y=xy[2],
-                                                        labels=bquote(arrow.lab[[trans]]),
-                                                        cex=arrow.lab.cex)
-    else{
-      arrow.lab.args <- c(arrow.lab.args,list(x=xy[1],
-                                              y=xy[2],
-                                              labels=bquote(arrow.lab[[trans]])))
-      arrow.lab.args <- arrow.lab.args[!duplicated(arrow.lab.args)]
+    # shift the start and end points of arrows by ArrowHeadOffset
+    ArrowHeadOffset <- arrowDefaults[trans,"headoffset"]
+    from <- from+sign(ArrowDirection)*c(ArrowHeadOffset,ArrowHeadOffset)*abs(ArrowDirection)
+    to <- to-sign(ArrowDirection)*c(ArrowHeadOffset,ArrowHeadOffset)*abs(ArrowDirection)
+    
+    arrowDefaults[trans,"x0"] <- from[1]
+    arrowDefaults[trans,"x1"] <- to[1]
+    arrowDefaults[trans,"y0"] <- from[2]
+    arrowDefaults[trans,"y1"] <- to[2]
+    ## shift arrow label perpendicular (left) to arrow direction
+    offset <- strwidth(".",cex=arrowLabel.cex)
+    ArrowMid <- (to+from)/2
+    ## points(x=ArrowMid[1],y=ArrowMid[2],col=3,pch=16)
+    ArrowLabelPos <- ArrowMid + sign(PerDir) * c(offset,offset)
+    try1 <- try(mode((arrowLabels[[trans]])[2])[[1]]=="call",silent=TRUE)
+    ## try2 <- try(as.character(arrowLabels[[trans]])[[1]]=="paste",silent=TRUE)
+    labIsCall <- (class(try1)!="try-error" && try1)
+    ## labUsePaste <- (class(try2)!="try-error" && try2)
+    if (labIsCall){ # symbolic label
+      arrowLabels[[trans]] <- ((arrowLabels[[trans]])[2])[[1]][[2]]
     }
-    do.call("text",arrow.lab.args)
-  })
-  par(mar=oldmar,xpd=oldxpd)
-  invisible(x)
+    ## relative label height
+    lab <- arrowLabels[[trans]]
+    labelHeight <- strheight(lab,cex=arrowlabelDefaults[trans,"cex"])
+    ## relative label width 
+    labelWidth <-  strwidth(lab,cex=arrowlabelDefaults[trans,"cex"])
+    ## shift further according to label height and width in perpendicular direction
+    ArrowLabelPos <- ArrowLabelPos+sign(PerDir)*c(labelWidth/2,labelHeight/2)
+    arrowlabelDefaults[trans,"x"] <- ArrowLabelPos[1] 
+    arrowlabelDefaults[trans,"y"] <- ArrowLabelPos[2]
+  }
+
+  # }}}
+  # {{{ Smart argument control
+
+  boxDefaultList <- lapply(1:NS,function(x)boxDefaults[x,-1,drop=FALSE])
+  names(boxDefaultList) <- boxDefaults$name
+  boxLabelDefaultList <- lapply(1:NS,function(x)boxLabelDefaults[x,-1,drop=FALSE])
+  names(boxLabelDefaultList) <- boxLabelDefaults$name
+  arrowDefaultList <- lapply(1:N,function(x)arrowDefaults[x,-1,drop=FALSE])
+  names(arrowDefaultList) <- as.character(arrowDefaults$name)
+  arrowlabelDefaultList <- lapply(1:N,function(x)arrowlabelDefaults[x,-1,drop=FALSE])
+  names(arrowlabelDefaultList) <- as.character(arrowlabelDefaults$name)
+  boxTagsDefaultList <- list(labels=numstateLabels,cex=1.28,adj=c(-.5,1.43))
+  smartArgs <- SmartControl(list(...),
+                            keys=c(boxDefaults$name,boxLabelDefaults$name,as.character(arrowDefaults$name),as.character(arrowlabelDefaults$name),"boxtags"),
+                            defaults=c(boxLabelDefaultList,arrowDefaultList,arrowlabelDefaultList,boxDefaultList,list("boxtags"=boxTagsDefaultList)),
+                            ignore.case=TRUE,
+                            replaceDefaults=FALSE,
+                            verbose=verbose)
+
+  # }}}
+  # {{{  draw the boxes
+  for (i in 1:NS) {
+    suppressWarnings(do.call("rect",smartArgs[[paste("box",i,sep="")]]))
+  }
+  # }}}
+  # {{{  label the boxes
+  
+  for (i in 1:NS) {
+    suppressWarnings(do.call("text",c(list(adj=c(0,0)),smartArgs[[paste("label",i,sep="")]])))
+  }
+
+  # }}}
+  # {{{  draw the arrows
+  for (i in 1:N){
+    suppressWarnings(do.call("arrows",c(smartArgs[[paste("arrow",i,sep="")]])))
+  }
+  # }}}
+  # {{{ label the arrows
+  if (arrowLabels.p==TRUE){
+    for (i in 1:N){
+      labelList <- smartArgs[[paste("arrowlabel",i,sep="")]]
+      switch(labelList$label,"symbolic"={
+        ## lab <- (arrowLabels[[i]])
+        try1 <- try(mode((arrowLabels[[i]])[2])[[1]]=="call",silent=TRUE)
+        ## try2 <- try(as.character(arrowLabels[[i]])[[1]]=="paste",silent=TRUE)
+        labIsCall <- (class(try1)!="try-error" && try1)
+        suppressWarnings(do.call("text",c(list(labels=bquote(arrowLabels[[i]])),labelList)))        
+      }, "count"={
+        tabTrans <- as.matrix(table(transitions))
+        lab <- paste("n=",tabTrans[as.character(labelList$from),as.character(labelList$to)])
+        suppressWarnings(do.call("text",c(list(labels=quote(lab)),labelList)))
+      })
+      ## suppressWarnings(do.call("text",c(list(adj=c(labelWidth/2,labelHeight/2),labels="label"),smartArgs[[paste("arrowlabel",i,sep="")]])))
+    }}
+  # }}}
+  # {{{  put numbers in the upper left corner of the boxes (if wanted)
+  
+  if (tagBoxes==TRUE){
+    tagList <- smartArgs$boxtags
+    nix <- lapply(1:NS,function(b) {
+      lab <- tagList[b]
+      text(x=xbox.position[b],
+           y=ybox.position[b]+box.height,
+           labels=tagList$labels[b],
+           cex=tagList$cex,
+           adj=tagList$adj)})
+  }
+
+  # }}}
+  # {{{ reset margin
+  par(mar=oldmar,xpd=oldxpd,oma=oldoma)
+  # }}}
+  invisible(smartArgs)
 }
 
 
+position.finder <- function(border,len,n){
+## distribute the boxes of lenght len uniformly
+## over [0,border]
+ if (n==1)
+    (border - len)/2
+  else{
+    seq(0,border-.5*len,len + (border-(n * len))/(n-1))
+  }  
+}
 
+centerBoxes <- function(border,len,ncell,pos){
+  ## box i has length len[i] and is centered in cell pos[i]
+  ## return the position in [0,border] of the lower
+  ## border of the boxes
+  cellheight <- border/ncell
+  if (sum(len)>border) warning("sum of box dimensions exceeds limits")
+  if (length(len)>ncell) warning("more boxes than cells")
+  box.pos <- seq(from=0,to=border,by=cellheight)[pos]+sapply(len,function(l) {(border/ncell - l)/2})
+  ## spread as far as possible
+  boxPos <- sapply(1:length(box.pos),function(b){
+    bp <- box.pos[b]
+    if (ncell>1 && pos[b]==1) # at the left/lower border
+      bp <- min(0,box.pos[b])
+    if (ncell> 1 && pos[b]==ncell)# at the right/upper border
+      bp <- max(border-len[b],box.pos[b])
+    bp
+  })
+  boxPos
+}
+
+
+## positionFinder <- function(border,len,n){
+## distribute the whitespace between the boxes
+## instead of the boxes
+## wspace <- border-sum(len)
+## if (n==1)
+## (border - len)/2
+## else{
+## seq(0,border-.5*len,len + (border-(n * len))/(n-1))
+## }  
+## }

@@ -10,12 +10,10 @@
                       maxiter=1000,
                       grid,
                       tol=7,
-                      ml=FALSE,
-                      exact=TRUE)
-{
+                      method=c("npmle","one.step","impute.midpoint","impute.right"),
+                      exact=TRUE){
 
-  # check if formula is a formula 
-  # --------------------------------------------------------------------
+  # {{{  check if formula is a formula 
   formula.names <- try(all.names(formula),silent=TRUE)
   if (!(formula.names[1]=="~")
       ||
@@ -25,11 +23,11 @@
   else
     if (!(formula.names[2] %in% c("Surv","Hist"))) stop("formula is NOT a proper survival formula,\nwhich must have a `Surv' or `Hist' object as response.")
 
-  # find the data
-  # --------------------------------------------------------------------
+  # }}}
+  # {{{  find the data
   call <- match.call()
   m <- match.call(expand = FALSE)
-  m <- m[match(c("","formula","data","subset","na.action"), names(m), nomatch = 0)]
+  m <- m[match(c("","formula","data","subset","na.action"),names(m),nomatch = 0)]
   special <- c("strata", "NN","cluster","dummy")
   if (missing(data)) Terms <- terms(formula, special)
   else Terms <- terms(formula,special,data=data)
@@ -37,31 +35,34 @@
   m[[1]] <- as.name("model.frame")
   m <- eval(m, parent.frame())
   if (NROW(m) == 0) stop("No (non-missing) observations")
+  rownames(m) <- NULL
   response <- model.extract(m, "response")
   #  FIX for people who use `Surv' instead of `Hist' 
-  
   if (match("Surv",class(response),nomatch=0)!=0){
     attr(response,"model") <- "survival"
     attr(response,"cens.type") <- "rightCensored"
-    model.type <- 1}
-  else
-  {
+    ## attr(response,"entry.type") <- ""
+    model.type <- 1
+  }
+  else{
     model.type <- match(attr(response,"model"),c("survival","competing.risks","multi.states"))
   }
-cens.type <- attr(response,"cens.type")
-##          stop("Response must be a survival or event history object created with `Surv' or `Hist'."))
-#  if (force.multistate==TRUE) model.type <- 3
-event.history <- response
-##   print(unclass(response))
-if (cens.type!="intervalCensored"){
-  event.time.order <- order(event.history[,"time"],-event.history[,"status"])
-}
-else{
-  event.time.order <- order(event.history[,"L"],-event.history[,"status"])
-}
+  ## estimation of censoring distribution
+  if (reverse==TRUE) model.type <- 1
+  cens.type <- attr(response,"cens.type")
+  ##          stop("Response must be a survival or event history object created with `Surv' or `Hist'."))
+  #  if (force.multistate==TRUE) model.type <- 3
+  event.history <- response
+  ##   print(unclass(response))
+  if (cens.type!="intervalCensored"){
+    event.time.order <- order(event.history[,"time"],-event.history[,"status"])
+  }
+  else{
+    event.time.order <- order(event.history[,"L"],-event.history[,"status"])
+  }
   
-  # covariates
-  # --------------------------------------------------------------------
+# }}}
+  # {{{  covariates
   
   covariates <- model.specials(m,special)
   if (length(attr(Terms,"factors"))==0){
@@ -73,30 +74,19 @@ else{
         covariates$strata <- cbind(covariates$strata,covariates$dummy)
       else covariates$strata <- covariates$dummy
     covariates$dummy <- NULL
-    
     all.varnames <- all.vars(delete.response(Terms))
-    unspecified <- all.varnames[!(all.varnames %in% unlist(lapply(covariates,names)))]
-        
-    ## print(unspecified)
-    rest <- m[,unspecified,drop=FALSE]
-    
+    rest <- covariates$unspecified
+    covariates$unspecified <- NULL
     discrete.p <- sapply(names(rest),function(u){x <- rest[,u,drop=TRUE]; !is.numeric(x) || !length(unique(x))>discrete.level})
-    
     if (any(!discrete.p))
       covariates$NN <- if (is.null(covariates$NN)) rest[,!discrete.p,drop=FALSE] else cbind(covariates$NN,rest[,!discrete.p,drop=FALSE])
-  
     if (any(discrete.p)){
       covariates$strata <- if (is.null(covariates$strata)) rest[,discrete.p,drop=FALSE] else cbind(covariates$strata,rest[,discrete.p,drop=FALSE])
     }
-
     if (NCOL(covariates$NN)>1) stop(paste("Currently we can not compute neighborhoods in", length(names(covariates$NN)),"continuous dimensions."))
-    
-    
     if (NCOL(covariates$NN)>1)
       stop(paste("Currently we can not compute neighborhoods in",length(names(covariates$NN)),"continuous dimensions."))
-    
     cotype <- 1 + (!is.null(covariates$strata))*1+(!is.null(covariates$NN))*2
-    
   }
   ## cotype
   # 1 : no covariates
@@ -104,8 +94,8 @@ else{
   # 3 : only continuous
   # 4 : strata AND continuous
     
-  # disjunct strata (discrete covariates)
-  # --------------------------------------------------------------------
+  # }}}
+  # {{{  disjunct strata (discrete covariates)
 
   if (cotype %in% c(2,4)){
     S <- do.call("paste", c(covariates$strata, sep = "\r"))
@@ -125,8 +115,8 @@ else{
   
   response <- response[sorted,] # sort each stratum
   
-  # overlapping neighborhoods (continuous covariates)
-  # --------------------------------------------------------------------
+# }}}
+  # {{{  overlapping neighborhoods (continuous covariates)
   
   if (cotype %in% c(3,4)){
     Z <- covariates$NN[sorted,,drop=TRUE]
@@ -146,9 +136,9 @@ else{
     response <- response[neighbors,,drop=FALSE]
   }
   
-  # bound on the number of unique time points over all strata  
-  # --------------------------------------------------------------------
-  
+# }}}
+  # {{{  bound on the number of unique time points over all strata  
+
   switch(cotype,
          { # type=1
            size.strata <- NROW(response)
@@ -174,9 +164,9 @@ else{
            n.unique.strata <- unlist(lapply(nbh.list,function(nbh)nbh$nu),use.names=FALSE)
            NU <- sum(n.unique.strata)
          })
-  
-  # characterizing the covariate space
-  # --------------------------------------------------------------------
+
+# }}}
+  # {{{  characterizing the covariate space
   
   continuous.predictors <- names(covariates$NN)
   discrete.predictors <- names(covariates$strata)
@@ -219,15 +209,13 @@ else{
   
   event.history <- event.history[event.time.order,,drop=FALSE]
   
-  # cluster correlated data need an adjusted variance formula
-  # --------------------------------------------------------------------
+  # }}}
+  # {{{  cluster correlated data need an adjusted variance formula
   clustered <- (length(covariates$cluster)>0)
-
   if (clustered)
     clustervar <- names(covariates$cluster)
   else
     clustervar <- NULL
-  
   if (clustered){
     cluster <- covariates$cluster[sorted,,drop=TRUE]
     if (cotype==1){
@@ -242,57 +230,43 @@ else{
       }
     }
   }
-
-  # find the appropriate C routine
-  # --------------------------------------------------------------------
+  # }}}
+  # {{{  find the appropriate C routine
   # with respect to model.type, cens.type, cotype and clustered
   # the following cases are not yet available
-  if (reverse && cens.type!="rightCensored") stop("Estimation of the censoring distribution works only for right censored data.")
-  if (reverse && clustered) stop("Estimation of censoring distribution with cluster-correlated observations not yet handled.")
-  if (cens.type=="intervalCensored" && model.type>=2) stop("Interval censored observations only handled for two-state models")
+  if (length(attr(event.history,"entry.type"))>1) stop("Prodlim: Estimation for left-truncated data not yet implemented.")
+  if (reverse && cens.type!="rightCensored") stop("Prodlim: Estimation of the censoring distribution works only for right censored data.")
+  if (reverse && clustered) stop("Prodlim: Estimation of censoring distribution with cluster-correlated observations not yet handled.")
+  if (cens.type=="intervalCensored" && model.type>=2) stop("Prodlim: Interval censored observations only handled for two-state models")
   ##   if (cens.type=="intervalCensored" && model.type>2) stop("Interval censored observations only handled for two-state and competing risks models")
-  if (clustered && model.type>1) stop("Cluster-correlated observations only handled for two-state models")
-  if (clustered && cotype %in% c(3,4)) stop("Cluster-correlated observations not yet handled in presence of continuous covariates") #cluster <- cluster[neighbors]
-  if (cotype>1 && cens.type=="intervalCensored") stop("Interval censored data and covariate strata not yet handled.")
-
+  if (clustered && model.type>1) stop("Prodlim: Cluster-correlated observations only handled for two-state models")
+  if (clustered && cotype %in% c(3,4)) stop("Prodlim: Cluster-correlated observations not yet handled in presence of continuous covariates") #cluster <- cluster[neighbors]
+  if (cotype>1 && cens.type=="intervalCensored") stop("Prodlim: Interval censored data and covariate strata not yet handled.")
   if (model.type==1){
-    # two state model
-    # --------------------------------------------------------------------
+    # }}}
+  # {{{  two state model
     if (clustered){
-      fit <- .C("prodlim",
-                as.double(response[,"time"]),
-                as.integer(response[,"status"]),
-                integer(0),
-                as.integer(cluster),
-                as.integer(N),
-                integer(0),
-                as.integer(NC),
-                as.integer(NU),
-                as.integer(size.strata),
-                time=double(N),
-                nrisk=double(2*N),
-                nevent=integer(2*N),
-                ncens=integer(N),
-                surv=double(N),
-                cuminc=double(0),
-                hazard=double(N),
-                var.hazard=double(N+N),
-                extra.double=double(2 * max(NC)),
-                extra.long=c(as.integer(max(NC)),integer(2 * max(NC))),
-                ntimes=integer(1),
-                ntimes.strata=integer(NU),
-                first.strata=integer(NU),
-                reverse=integer(0),
-                model=as.integer(0),
-                independent=as.integer(0),
-                PACKAGE="prodlim")
+      fit <- .C("prodlim",as.double(response[,"time"]),as.integer(response[,"status"]),integer(0),as.integer(cluster),as.integer(N),integer(0),as.integer(NC),as.integer(NU),as.integer(size.strata),time=double(N),nrisk=double(2*N),nevent=integer(2*N),ncens=integer(2*N),surv=double(N),cuminc=double(0),hazard=double(N),var.hazard=double(N+N),extra.double=double(2 * max(NC)),extra.long=c(as.integer(max(NC)),integer(2 * max(NC))),ntimes=integer(1),ntimes.strata=integer(NU),first.strata=integer(NU),reverse=integer(0),model=as.integer(0),independent=as.integer(0),PACKAGE="prodlim")
       NT <- fit$ntimes
-      Cout <- list("time"=fit$time[1:NT],"n.risk"=matrix(fit$nrisk,ncol=2,byrow=FALSE,dimnames=list(NULL,c("n.risk","cluster.n.risk")))[1:NT,],"n.event"=matrix(fit$nevent,ncol=2,byrow=FALSE,dimnames=list(NULL,c("n.event","cluster.n.event")))[1:NT,],"n.lost"=fit$ncens[1:NT],"surv"=fit$surv[1:NT],"se.surv"=fit$surv[1:NT]*sqrt(fit$var.hazard[N+(1:NT)]),"naive.se.surv"=fit$surv[1:NT]*sqrt(fit$var.hazard[1:NT]),"hazard"=fit$hazard[1:NT],"first.strata"=fit$first.strata,"size.strata"=fit$ntimes.strata,"model"="survival")
+      Cout <- list("time"=fit$time[1:NT],"n.risk"=matrix(fit$nrisk,ncol=2,byrow=FALSE,dimnames=list(NULL,c("n.risk","cluster.n.risk")))[1:NT,],"n.event"=matrix(fit$nevent,ncol=2,byrow=FALSE,dimnames=list(NULL,c("n.event","cluster.n.event")))[1:NT,],"n.lost"=matrix(fit$ncens,ncol=2,byrow=FALSE,dimnames=list(NULL,c("n.lost","cluster.n.lost")))[1:NT,],"surv"=fit$surv[1:NT],"se.surv"=fit$surv[1:NT]*sqrt(fit$var.hazard[N+(1:NT)]),"naive.se.surv"=fit$surv[1:NT]*sqrt(fit$var.hazard[1:NT]),"hazard"=fit$hazard[1:NT],"first.strata"=fit$first.strata,"size.strata"=fit$ntimes.strata,"model"="survival")
       Cout$maxtime <- max(Cout$time)
     }
     else{
       if (cens.type=="intervalCensored"){
-        Cout <- prodlimIcensSurv(response,grid,tol=tol,maxiter=maxiter,ml=ml,exact=exact)
+        if (length(method)>1) method <- method[1]
+        if (length(grep("impute",method))>0){
+          naiiveMethod <- strsplit(method,"impute.")[[1]][[2]]
+          if (naiiveMethod=="midpoint"){
+            naiveResponse <- data.frame(unclass(response))
+            naiveResponse$imputedTime <- (naiveResponse$L+naiveResponse$R)/2
+            naiveResponse[naiveResponse[,"status"]==0,"imputedTime"] <- naiveResponse[naiveResponse[,"status"]==0,"L"]
+            Cout <- prodlim(Hist(imputedTime,status!=0)~1,data=naiveResponse)
+            return(Cout)
+          }
+        }
+        else{
+          Cout <- prodlimIcensSurv(response,grid,tol=tol,maxiter=maxiter,ml=ifelse(method=="one.step",FALSE,TRUE),exact=exact)
+        }
       }
       else{
         fit <- .C("prodlim",as.double(response[,"time"]),as.integer(response[,"status"]),integer(0),integer(0),as.integer(N),integer(0),integer(0),as.integer(NU),as.integer(size.strata),time=double(N),nrisk=double(N),nevent=integer(N),ncens=integer(N),surv=double(N),double(0),hazard = double(N),var.hazard=double(N),extra.double=double(0),extra.long=integer(0),ntimes=integer(1),ntimes.strata=integer(NU),first.strata=integer(NU),as.integer(reverse),model=as.integer(0),independent=as.integer(1),PACKAGE="prodlim")
@@ -303,11 +277,11 @@ else{
     }
   }
   else{
+    # }}}
+    # {{{ competing.risks model
     if (model.type==2){
-      # competing.risks model
-      # --------------------------------------------------------------------    
       states <- attr(response,"states")
-      E <- response[,"event"]-2 # for the c routine
+      E <- response[,"event"]-1 # for the c routine
       D <- response[,"status"]
       NS <- length(unique(E[D!=0])) # number of different causes
       fit <- .C("prodlim",as.double(response[,"time"]),as.integer(D),as.integer(E),integer(0),as.integer(N),as.integer(NS),integer(0),as.integer(NU),as.integer(size.strata),time=double(N),nrisk=double(N),nevent=integer(N * NS),ncens=integer(N),surv=double(N),cuminc=double(N * NS),cause.hazard = double(N * NS),var.hazard=double(N * NS),double(4 * NS),integer(0),ntimes=integer(1),ntimes.strata=integer(NU),first.strata=integer(NU),reverse=integer(0),model=as.integer(1),independent=as.integer(1),PACKAGE="prodlim")
@@ -333,15 +307,17 @@ else{
     }
   }
   if (conf.int==TRUE) conf.int <- 0.95
-  # confidence intervals
-  # --------------------------------------------------------------------
+  # }}}
+  # {{{  confidence intervals
   if (is.numeric(conf.int) && cens.type!="intervalCensored"){
     if (model.type==1){
       if (!(is.null(Cout$se.surv))){
         ## pointwise confidence intervals for survival probability
         zval <- qnorm(1- (1-conf.int)/2, 0,1)
         lower <- pmax(Cout$surv - zval * Cout$se.surv,0)
+        lower[Cout$se.surv==0] <- 0
         upper <- pmin(Cout$surv + zval * Cout$se.surv,1)
+        upper[Cout$se.surv==0] <- 1
         Cout <- c(Cout,list(lower=lower,upper=upper))
       }
     }
@@ -361,20 +337,12 @@ else{
       }
     }
   }
-  out <- list("call"=call,
-              "formula"=formula,
-              "model.response"=event.history,
-              "X"=X,
-              "model.matrix"=model.matrix,
-              "discrete.predictors"=discrete.predictors,
-              "continuous.predictors"=continuous.predictors,
-              "clustervar"=clustervar,
-              "covariate.type"=cotype,
-              "cens.type"=cens.type,
-              "conf.int"=conf.int,
-              "reverse"=reverse)
+  # }}}
+  # {{{ return object of class "prodlim"
+  out <- list("call"=call,"formula"=formula,"model.response"=event.history,"X"=X,"model.matrix"=model.matrix,"discrete.predictors"=discrete.predictors,"continuous.predictors"=continuous.predictors,"clustervar"=clustervar,"covariate.type"=cotype,"cens.type"=cens.type,"conf.int"=conf.int,"reverse"=reverse)
   if (cotype %in% c(3,4)) out <- c(out,list("bandwidth"=bandwidth))
   out <- c(Cout,out)
   class(out) <-  "prodlim"
   return(out)
+  # }}}
 }

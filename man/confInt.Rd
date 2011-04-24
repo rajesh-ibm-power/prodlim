@@ -1,6 +1,6 @@
-\name{ConfInt}
+\name{confInt}
 \Rdversion{1.1}
-\alias{ConfInt}
+\alias{confInt}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
   Add point-wise confidence limits to the graphs of Kaplan-Meier and
@@ -10,7 +10,7 @@
   This function is invoked and controlled by \code{plot.prodlim}. 
 }
 \usage{
-ConfInt(x, times, newdata, type, cause, col, lty, lwd, ...)
+confInt(x, times, newdata, type, citype, cause, col, lty, lwd, density=55, exact=FALSE, ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -23,11 +23,13 @@ ConfInt(x, times, newdata, type, cause, col, lty, lwd, ...)
     see \code{plot.prodim}
   }
   \item{type}{
-    If \code{"bars"} then confidence limits are drawn as vertical bars
-    at specified \code{times}. Else (the default) pseudo confidence
-    bands are drawn by connecting all the upper confidence
- limits and all the lower confidence
- limits.
+    Either \code{"cuminc"} or \code{"survival"} passed to
+    summary.prodlim as \code{surv=ifelse(type=="cuminc",FALSE,TRUE)}.
+  }
+  \item{citype}{
+    If \code{"shadow"} then confidence limits are drawn as colored shadows.
+    Otherwise, dotted lines are used to show
+    the upper and lower confidence limits.
   }
   \item{cause}{
     see \code{plot.prodim}
@@ -40,6 +42,14 @@ ConfInt(x, times, newdata, type, cause, col, lty, lwd, ...)
   }
   \item{lwd}{
     the line thickness of the lines.
+  }
+  \item{density}{
+    For \code{citype="shadow"}, the density of the shade. Default is 55 percent.
+  }
+  \item{exact}{
+    If \code{TRUE} the shadow border follows the upper and lower
+    confidence limits at *all* timepoints, otherwise 100 time points are
+    found as \code{seq(min(x$times),max(x$times),diff(range(x$times)/100))}.
   }
   \item{\dots}{
     Further arguments that are passed to the function \code{segments} if
@@ -57,6 +67,6 @@ ConfInt(x, times, newdata, type, cause, col, lty, lwd, ...)
 Thomas Alexander Gerds <tag@biostat.ku.dk>
 }
 \seealso{
-  \code{\link{plot.prodlim}}, \code{\link{AtRisk}}, \code{\link{MarkTime}}
+  \code{\link{plot.prodlim}}, \code{\link{atRisk}}, \code{\link{markTime}}
 }
 \keyword{survival}

@@ -5,27 +5,34 @@ SimSurv <- function(N,
                     verbose=1,
                     ...){
   
-  default.surv.args <- list(dist="rweibull",args=list(shape=1),baseline=1/100,link="exp",coef=c(1,-1),transform=NULL)
-  default.cens.args <- list(dist="rexp",args=NULL,baseline=1/100,link="exp",max=NULL,type="right",coef=NULL,transform=NULL)
-  if (missing(cova)) cova <- list(X1=list("rnorm",mean=0,sd=2),X2=list("rbinom",size=1,prob=.5))
-  smartA <- resolveSmartArgs(call=match.call(),
-                             keys=c("surv","cens","cova"),
-                             ignore=c("n","N","surv","cens","cova","verbose"),
-                             defaults=list("surv"=default.surv.args,"cens"=default.cens.args),
-                             verbose=TRUE)
+  default.surv.args <- list(model="Cox-Weibull",shape=1,baseline=1/100,link="exp",coef=c(1,-1),transform=NULL)
+  default.cens.args <- list(model="Cox-exponential",baseline=1/100,link="exp",max=NULL,type="right",coef=NULL,transform=NULL)
+  if (missing(cova))
+    default.cova.args <- list(X1=list("rnorm",mean=0,sd=2),X2=list("rbinom",size=1,prob=.5))
+  else
+    default.cova.args <- cova
+  smartA <- SmartControl(call=match.call(expand=TRUE),
+                         keys=c("surv","cens","cova"),
+                         defaults=list("surv"=default.surv.args,
+                           "cens"=default.cens.args,
+                           "cova"=default.cova.args),
+                         ignore=c("surv","cens","verbose","N","cova"),
+                         ignore.case=FALSE,
+                         replaceDefaults=c("surv"=FALSE,"cens"=FALSE,"cova"=FALSE),
+                         verbose=TRUE)
   surv <- smartA$surv
-  
   censnotwanted <- (!missing(cens) && is.logical(cens) && cens==FALSE)
-  
   if (!censnotwanted) cens <- smartA$cens
-
+  
+  ## backward compatibility
+  if (!is.null(surv$dist)) {warning("Argument surv.dist is depreciated. please use surv.model instead.")}
+  if (!censnotwanted)
+    if (!is.null(cens$dist)) {warning("Argument surv.dist is depreciated. please use surv.model instead.")}
+  
   # ------------------------resolving covariates------------------------
-  
-  X.matrix <- do.call(resolveX,c(list(N=N),object=list(cova)))
+  X.matrix <- do.call(resolveX,c(list(N=N),object=list(smartA$cova)))
   NP <- NCOL(X.matrix)
-
   # -----------special links between survival and covariates-----------
-  
   if (length(surv$transform)>0){
     survSpecials <- TRUE
     surv.X <- transformX(X=X.matrix,transform=surv$transform,transName="f")
@@ -38,10 +45,13 @@ SimSurv <- function(N,
   # ------------------resolving the linear predictors------------------
 
   linpred.surv <- resolveLinPred(X=surv.X,coef=surv$coef,verbose=verbose)
-
-  # ---------------------------survival time---------------------------
   
-  surv.time <- SimSurvInternal(N=N,dist=surv$dist,args=surv$args,link=surv$link,baseline=surv$baseline,linpred=linpred.surv)
+  # ---------------------------survival time---------------------------
+  survTime.args=surv[match(c("N", "model", "link", "baseline", "linpred", "shape", "min", "max"),names(surv),nomatch=FALSE)]
+  surv.time <- do.call("SimSurvInternal",
+                       c(list(N=N,linpred=linpred.surv),
+                         survTime.args))
+  ##   surv.time <- SimSurvInternal(N=N,model=surv$model,args=surv$args,link=surv$link,baseline=surv$baseline,linpred=linpred.surv)
   
   # ---------------------------censoring----------------------------
 
@@ -51,7 +61,7 @@ SimSurv <- function(N,
   if (censnotwanted==TRUE)
     cens.time <- rep(Inf,N)
   else{
-
+    
     # --------special links between right censoring and covariates-----------
     
     if (length(cens$transform)>0){
@@ -62,10 +72,12 @@ SimSurv <- function(N,
       censSpecials <- FALSE
       cens.X <- X.matrix
     }
-
-    linpred.cens <- resolveLinPred(X=cens.X,coef=cens$coef,verbose=verbose)
     
-    cens.time <- SimSurvInternal(N=N,dist=cens$dist,args=cens$args,link=cens$link,baseline=cens$baseline,linpred=linpred.cens)
+    linpred.cens <- resolveLinPred(X=cens.X,coef=cens$coef,verbose=verbose)
+
+    censTime.args=cens[match(c("N", "model", "link", "baseline", "linpred", "shape", "min", "max"),names(cens),nomatch=FALSE)]
+    cens.time <- do.call("SimSurvInternal",c(list(N=N,linpred=linpred.cens),censTime.args))
+    ##     cens.time <- SimSurvInternal(N=N,model=cens$model,args=cens$args,link=cens$link,baseline=cens$baseline,linpred=linpred.cens)
     
     if (is.numeric(cens$max)) cens.time <- pmin(cens.time, cens$max)
 
@@ -82,13 +94,11 @@ SimSurv <- function(N,
                                                event.time=surv.time)
     }
   }
-
   # ------the censoring status: 0= right, 1= observed, 2= interval------
 
   status <- as.numeric(surv.time <= cens.time)
 
   # ------------------------preparing the output------------------------
-  
   out <- data.frame(cbind(time = pmin(surv.time, cens.time),
                           status = status,
                           uncensored.time=surv.time,
@@ -106,7 +116,6 @@ SimSurv <- function(N,
         out$status[out$L==out$R] <- 1
       }
     }}
-
   # --------------------------sorting the data--------------------------
   
   out <- out[order(out$time,-out$status),]
@@ -129,15 +138,24 @@ SimSurv <- function(N,
 }
 
 
-SimSurvInternal <- function(N, dist, args, link, baseline, linpred){
+SimSurvInternal <- function(N,
+                            model,
+                            link,
+                            baseline,
+                            linpred,
+                            shape,
+                            min,
+                            max){
   if (length(linpred)==0) linpred <- 0
-  Stime <- switch(dist,
-                  "runif"= do.call("runif",c(list(n=N),args)),
-                  "rexp"= (1/baseline) * (-log(runif(N)) * exp(-linpred)),
-                  "rweibull"= (- (log(runif(N)) * (1 / baseline) * exp(-linpred)))^(1/args$shape),
-                  "rgompertz"=(1/args$alpha) * log(1 - (args$alpha/baseline) * (log(runif(N)) * exp(-linpred))))
+  Stime <- switch(model,
+                  "uniform"= runif(N,min,max),
+                  "Cox-exponential"= (1/baseline) * (-log(runif(N)) * exp(-linpred)),
+                  "Cox-Weibull"={(- (log(runif(N)) * (1 / baseline) * exp(-linpred)))^(1/shape)},
+                  "Cox-Gompertz"=(1/shape) * log(1 - (shape/baseline) * (log(runif(N)) * exp(-linpred))))
   Stime
 }
+
+
 
 SimSurvInternalTimeVarying <- function(N,dist, args, coef, baseline, x, fun){
   #  idea from yanqing sun:

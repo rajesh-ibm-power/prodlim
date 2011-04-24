@@ -1,6 +1,6 @@
-\name{AtRisk}
+\name{atRisk}
 \Rdversion{1.1}
-\alias{AtRisk}
+\alias{atRisk}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
   Drawing numbers of subjects at-risk of experiencing an event below
@@ -10,7 +10,7 @@
   This function is invoked and controlled by \code{plot.prodlim}. 
 }
 \usage{
-AtRisk(x, newdata, times, line, interspace, cex, labels, pos, adj, dist, adjust.labels = TRUE, ...)
+atRisk(x, newdata, times, line, col, interspace, cex, labels, pos, adj, dist, adjust.labels = TRUE, ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -24,6 +24,9 @@ AtRisk(x, newdata, times, line, interspace, cex, labels, pos, adj, dist, adjust.
   }
   \item{line}{
     Distance of the atrisk numbers from the inner plot.
+  }
+  \item{col}{
+    The color of the text.
   }
   \item{interspace}{
     Distance between rows of atrisk numbers.
@@ -53,7 +56,7 @@ AtRisk(x, newdata, times, line, interspace, cex, labels, pos, adj, dist, adjust.
 }
 \details{
   This function should not be called directly. The arguments can be
-  specified as \code{AtRisk.arg} in the call to \code{plot.prodim}.
+  specified as \code{atRisk.arg} in the call to \code{plot.prodim}.
 }
 \value{
   Nil
@@ -63,6 +66,6 @@ Thomas Alexander Gerds <tag@biostat.ku.dk>
 }
 
 \seealso{
-  \code{\link{plot.prodlim}}, \code{\link{ConfInt}}, \code{\link{MarkTime}}
+  \code{\link{plot.prodlim}}, \code{\link{confInt}}, \code{\link{markTime}}
 }
 \keyword{survival}

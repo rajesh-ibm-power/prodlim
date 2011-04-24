@@ -1,4 +1,32 @@
 <contents depth="1">
+
+
+; {{{cluster no. censored 13 Nov 2010 (09:54)
+
+* cluster no. censored 13 Nov 2010 (09:54)
+
+The number of clusters lost to follow-up may not always be sufficient
+information, as it is for dental data. For example, in a multi center
+study. Thus, from version 1.1.6 there are two columns also for n.cens.
+
+; }}}
+; {{{model.specials 10 May 2010 (09:30)
+
+* model.specials 10 May 2010 (09:30)
+
+check.code("prodlim")
+
+X=data.frame(X1=1:10,X2=letters[1:10],X3=rep(1:3,length.out=10))
+d=cbind(SimSurv(10),X)
+
+prodlim(Hist(time,status)~X1+X2+X3,data=d)
+
+d$X3=rmultinom(10,3,.6)
+m=model.frame(Hist(time,status)~X1+factor(X2),data=d)
+
+model.matrix(
+
+; }}}
 ; {{{warnings 27 Nov 2009 (22:11)
 
 * warnings 27 Nov 2009 (22:11)
@@ -13,10 +41,10 @@ http://cran.r-project.org/web/checks/check_summary.html
 
 library(prodlim)
 library(pseudo)
-ddd <- read.table("~/research/SoftWare/prodlim/Examples/comprisk-frame.txt",header=T)
-fff <- prodlim(Hist(time,event)~1,data=ddd)
-fff7 <- prodlim(Hist(time,event)~1,data=ddd[-7,])
-fff1 <- prodlim(Hist(time,event)~1,data=ddd[-1,])
+ddd <- prodlim:::SimCompRisk(100)
+fff <- prodlim(Hist(time,cause)~1,data=ddd)
+fff7 <- prodlim(Hist(time,cause)~1,data=ddd[-7,])
+fff1 <- prodlim(Hist(time,cause)~1,data=ddd[-1,])
 ttt <- ddd$time
 p1 <- predict(fff1,times=ttt)
 p7 <- predict(fff7,times=ttt)
@@ -35,11 +63,11 @@ all(a[!is.na(a)]==b[!is.na(a)])
 
 
 N <- 2000
-ddd <- data.frame(time=1:N,event=rbinom(N,2,.5),X=rbinom(N,1,.5))
+ddd <- data.frame(time=1:N,cause=rbinom(N,2,.5),X=rbinom(N,1,.5))
 ttt <- c(3,5,10)
 # ttt <- ddd$time
-fff <- prodlim(Hist(time,event)~1,data=ddd)
-system.time(jack <- with(ddd,pseudoci(time,event,ttt))[,-c(1:2,seq(4,N+2,2))])
+fff <- prodlim(Hist(time,cause)~1,data=ddd)
+system.time(jack <- with(ddd,pseudoci(time,cause,ttt))[,-c(1:2,seq(4,N+2,2))])
 system.time({jack2 <- jackknife.competing.risks(fff,times=ttt)})
 all(round(jack2[,1],9)==round(jack[,1],9))
 

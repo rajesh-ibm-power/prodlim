@@ -1,13 +1,10 @@
-"quantile.prodlim" <- function(object,
+"quantile.prodlim" <- function(x,
                                q,
-                               newdata,
-                               level.chaos=1,
-                               mode="list",
                                ...){
-  stopifnot(object$model=="survival")
+  stopifnot(x$model=="survival")
   if (missing(q)) q <- c(1,.75,0.5,.25,0)
   q <- 1-q ## ts says correctly that this is a survival function
-  sumx <- summary(object,newdata=object$X,times=object$time,showTime=TRUE,verbose=FALSE)
+  sumx <- summary(x,newdata=x$X,times=x$time,showTime=TRUE,verbose=FALSE)
   getQ <- function(sum){
     out <- do.call("cbind",lapply(c("surv","lower","upper"),function(w){
       nanana=is.na(sum[,w])
@@ -21,7 +18,7 @@
     out <- cbind(q,out)
     names(out) <- c("q","quantile","lower","upper")
     out}
-  if (is.null(object$X)) getQ(sumx)
+  if (is.null(x$X)) getQ(sumx)
   else lapply(sumx,getQ)
 }
   

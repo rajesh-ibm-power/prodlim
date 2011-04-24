@@ -1,9 +1,15 @@
-"sindex" <- function (jump.times, eval.times, comp="smaller",strict=FALSE) {
+"sindex" <- function(jump.times,
+                     eval.times,
+                     comp="smaller",
+                     strict=FALSE) {
   stopifnot(is.numeric(jump.times))
   stopifnot(is.numeric(eval.times))
   N <- length(jump.times)
   if (comp=="greater"){
-    N-sindex(jump.times=jump.times,eval.times=eval.times,comp="smaller",strict=!strict)
+    N-sindex(jump.times=jump.times,
+             eval.times=eval.times,
+             comp="smaller",
+             strict=!strict)
   }
   else{
     neval <- length(eval.times)

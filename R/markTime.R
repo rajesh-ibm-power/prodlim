@@ -1,4 +1,4 @@
-MarkTime <- function(x,times,nlost,pch,col){
+markTime <- function(x,times,nlost,pch,col){
   mtimeList=lapply(1:length(x),function(i){
     who=nlost[[i]]>0 & !is.na(nlost[[i]])
     mark.x=times[who]

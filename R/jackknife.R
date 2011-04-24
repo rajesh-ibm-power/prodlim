@@ -33,7 +33,7 @@ jackknife.competing.risks <- function(object,times,cause,...){
 }
 
 
-leaveOneOut.survival <- function(object,times,lag=0,...){
+leaveOneOut.survival <- function(object,times,lag=FALSE,...){
   stopifnot(object$covariate.type==1)
   ##
   time <- object$time
@@ -63,7 +63,7 @@ leaveOneOut.survival <- function(object,times,lag=0,...){
   out <- loo
   if (!missing(times)){
     found <- sindex(jump.times=time,eval.times=times)+1
-    if (lag==0)
+    if (lag==FALSE)
       out <- cbind(1,out)[,found,drop=TRUE]
     else
       out <- cbind(1,cbind(1,out))[,found,drop=TRUE]
@@ -74,7 +74,7 @@ leaveOneOut.survival <- function(object,times,lag=0,...){
 leaveOneOut.competing.risks <- function(object,times,cause,...){
   stopifnot(object$covariate.type==1)
   mr <- object$model.response
-  states <- states(object)
+  states <- attr(mr,"states")
   if (missing(cause)) {
     C <- 1
     cause <- states[1]
@@ -94,7 +94,7 @@ leaveOneOut.competing.risks <- function(object,times,cause,...){
   NU <- length(time)
   obstimes <- mr[,"time"]
   status <- mr[,"status"]
-  E <- events(object)
+  E <- getEvent(object$model.response)
   N <- length(obstimes)
   ## idea: see leaveOneOut.survival
   pos <- sindex(jump.times=time,eval.times=obstimes)
@@ -112,7 +112,6 @@ leaveOneOut.competing.risks <- function(object,times,cause,...){
     found <- sindex(jump.times=time,eval.times=times)+1
     out <- cbind(1,out)[,found,drop=TRUE]
   }
-#  out[NROW(out)]
   out
 }
 

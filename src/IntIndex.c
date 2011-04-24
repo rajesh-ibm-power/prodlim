@@ -55,28 +55,27 @@ void Turnb(int *Mstrata,
   
   int i,l,u,j,Iind, Mind;
   double Ilast, ZI, ZM, Mlast, Zlast, ZMI;
-
+  
   for(i=0;i<*M;i++){
-
 
   Zlast=0;
   ZMI=0;
 
   for(l=0;l<*N; l++){
-
-  Mlast=0;
-  ZM=0;
-  Mind=0;
+    
+    Mlast=0;
+    ZM=0;
+    Mind=0;
+    
+    for(u=Mstrata[l];u<Mstrata[l+1];u++){
+      
+      Mind=Mindex[u];
+      
+      Ilast=0;
+      ZI=0;
+      Iind=0;
   
-  for(u=Mstrata[l];u<Mstrata[l+1];u++){
-
-  Mind=Mindex[u];
-  
-  Ilast=0;
-  ZI=0;
-  Iind=0;
-
-  for(j=Istrata[l]; j<Istrata[l+1];j++)
+      for(j=Istrata[l]; j<Istrata[l+1];j++)
     { 
       Iind=Iindex[j];
       ZI=Z[Iind-1]+Ilast;

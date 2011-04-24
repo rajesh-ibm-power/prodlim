@@ -3,7 +3,7 @@ resolveX <- function(object,N){
   if (!missing(object) && (is.null(object)|| (is.logical(object) && object==FALSE)))
     X <- NULL
   else{
-    ## if the object is a matrix the pass it 
+    ## if the object is a matrix then do nothing
     if (is.matrix(object) && NROW(object)==N)
       X <- object
     else

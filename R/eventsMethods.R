@@ -20,21 +20,11 @@ events.Hist <- function(object,...){
       D <- object[,"status",drop=TRUE]
       cens.type <- attr(object,"cens.type")
       E <- object[,"event",drop=TRUE]
-  
-      if (cens.type=="rightCensored"){
-        stupid.stupid.factor.levels <- as.integer(factor(c(cens.code,states),levels=c(cens.code,states)))
-        sorted.stupid.stupid.factor.levels <- c(stupid.stupid.factor.levels[-1],stupid.stupid.factor.levels[1])
-        events <- factor(E,
-                         levels=sorted.stupid.stupid.factor.levels,
-                         labels=c(states,"unknown"))
-      }
-      else{
-        stupid.stupid.factor.levels <- as.integer(factor(c(cens.code,states),levels=c(cens.code,states)))
-        sorted.stupid.stupid.factor.levels <- c(stupid.stupid.factor.levels[-1],stupid.stupid.factor.levels[1])
-        events <- factor(E,
-                         levels=sorted.stupid.stupid.factor.levels,
-                         labels=c(states,"unknown"))
-      }
+      names(E) <- NULL
+      stupid.stupid.factor.levels <- as.integer(factor(c(states,cens.code),levels=c(states,cens.code)))
+      ## sorted.stupid.stupid.factor.levels <- c(stupid.stupid.factor.levels[-1],stupid.stupid.factor.levels[1])
+      ## events <- factor(E,levels=sorted.stupid.stupid.factor.levels,labels=c(states,"unknown"))
+      events <- factor(E,levels=stupid.stupid.factor.levels,labels=c(states,"unknown"))
       events
     }
     else stop("No event.Hist function for multi.state models")

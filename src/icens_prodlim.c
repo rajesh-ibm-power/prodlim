@@ -78,11 +78,11 @@
 void icens_prodlim(double *L,
 		   double *R,
 		   double *grid,
-		   long *indexL,
-		   long *indexR,
-		   long *iindex,
-		   long *imax,
-		   long *status,
+		   int *indexL,
+		   int *indexR,
+		   int *iindex,
+		   int *imax,
+		   int *status,
 		   double *N,
 		   double *NS,
 		   double *nrisk,
@@ -93,11 +93,11 @@ void icens_prodlim(double *L,
 		   double *surv,
 		   double *oldsurv,
 		   double *tol,
-		   long *maxstep,
-		   long *niter) {
+		   int *maxstep,
+		   int *niter) {
   
-  long i, j, s, done=0, step=0, n, ns, start, stop;
-  /*   long verbose; */
+  int i, j, s, done=0, step=0, n, ns, start, stop;
+  /*   int verbose; */
   double atrisk, pl, haz, varhaz, diff, survL, survR, lenOBS, nom;
   
   n = (int) *N; /* number of interval censored observations */

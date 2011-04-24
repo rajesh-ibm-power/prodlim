@@ -20,7 +20,7 @@
                maxiter=1000,
                grid,
                tol=7,
-               ml=FALSE,
+               method=c("npmle","one.step","impute.midpoint","impute.right"),
                exact=TRUE)
      }
 %- maybe also 'usage' for other objects documented here.
@@ -67,19 +67,23 @@
     according to the bandwidth.
   }
   \item{maxiter}{
+    For interval censored data only.
     Maximal number of iterations to obtain the nonparametric maximum likelihood estimate.
     Defaults to 1000.
   }
   \item{grid}{
-    When ml=FALSE grid for one-step product limit estimate. Defaults to
+    For interval censored data only.
+    When method=one.step grid for one-step product limit estimate. Defaults to
     sorted list of unique left and right endpoints of the observed intervals.
   }
   \item{tol}{
+    For interval censored data only.
     Numeric value whose negative exponential is used as convergence criterion
     for finding the nonparametric maximum likelihood estimate.
     Defaults to 7 meaning exp(-7).}
-  \item{ml}{
-    If TRUE (not the default!) use the usual Turnbull algorithm, else
+  \item{method}{
+    For interval censored data only.
+    If equal to \code{"npmle"} (the default) use the usual Turnbull algorithm, else
     the product limit version of the
     self-consistent estimate.
   }
@@ -183,7 +187,7 @@ summary(fit)
 
 ## --------------------clustered data---------------------
 
-dat <- SimSurv(100,cova=list(patnr=list("rbinom",30,.5)),surv.coef=1,surv.baseline=1/10000000)
+dat <- data.frame(time=rexp(100),status=rbinom(100,1,.3),X=rbinom(100,1,.5),Z=rnorm(100,10,3),patnr=sample(1:10,size=100,replace=TRUE))
 fit <- prodlim(Hist(time,status)~cluster(patnr),data=dat)
 print(fit)
 plot(fit)
@@ -192,42 +196,44 @@ summary(fit)
 
 ##-----------compare Kaplan-Meier to survival package---------
 
-pfit <- prodlim(Surv(time,status)~1,data=pbc)
-pfit <- prodlim(Hist(time,status)~1,data=pbc) ## same thing
-sfit <- survfit(Surv(time,status)~1,data=pbc,conf.type="plain")
+dat <- SimSurv(100)
+pfit <- prodlim(Surv(time,status)~1,data=dat)
+pfit <- prodlim(Hist(time,status)~1,data=dat) ## same thing
+sfit <- survfit(Surv(time,status)~1,data=dat,conf.type="plain")
 ##  same result for the survival distribution function 
 all(round(pfit$surv,12)==round(sfit$surv,12))
 summary(pfit,digits=3)
-summary(sfit,times=quantile(unique(pbc$time)))
+summary(sfit,times=quantile(unique(dat$time)))
 
 ##------------------censoring survival function----------------
 
-rpfit <- prodlim(Hist(time,status)~1,data=pbc,reverse=TRUE)
-rsfit <- survfit(Surv(time,1-status)~1,data=pbc,conf.type="plain") 
+rpfit <- prodlim(Hist(time,status)~1,data=dat,reverse=TRUE)
+rsfit <- survfit(Surv(time,1-status)~1,data=dat,conf.type="plain") 
 ## not the same if there are ties!
 all(round(rpfit$surv,3)==round(rsfit$surv,3))
 
 ##-------------------stratified Kaplan-Meier---------------------
 
-pfit.edema <- prodlim(Surv(time,status)~edema,data=pbc)
-summary(pfit.edema)
-summary(pfit.edema,intervals=TRUE)
-plot(pfit.edema)
+pfit.X2 <- prodlim(Surv(time,status)~X2,data=dat)
+summary(pfit.X2)
+summary(pfit.X2,intervals=TRUE)
+plot(pfit.X2)
 
 ##----------continuous covariate: Stone-Beran estimate------------
 
-prodlim(Surv(time,status)~age,data=pbc)
+prodlim(Surv(time,status)~X1,data=dat)
 
 ##-------------both discrete and continuous covariates------------
 
-prodlim(Surv(time,status)~edema+age,data=pbc)
+prodlim(Surv(time,status)~X2+X1,data=dat)
 
 ##----------------------interval censored data----------------------
 
 dat <- data.frame(L=1:10,R=c(2,3,12,8,9,10,7,12,12,12),status=c(1,1,0,1,1,1,1,0,0,0))
 with(dat,Hist(time=list(L,R),event=status))
 
-npmle.fitml <- prodlim(Hist(time=list(L,R),event=1)~1,data=dat,ml=TRUE)
+dat$event=1
+npmle.fitml <- prodlim(Hist(time=list(L,R),event)~1,data=dat)
 
 ##-------------competing risks-------------------
 

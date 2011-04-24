@@ -11,4 +11,3 @@ states.prodlim <- function(object){
   attr(object$model.response,"states")
 }
 
-
