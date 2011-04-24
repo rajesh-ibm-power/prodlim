@@ -296,17 +296,6 @@ abline(v=testdat$time[k])
 
 
 
-a <- prodlim(Hist(1:10,rbinom(10,3,.4))~1)
-
-
-
-y <- rbinom(10000,1,.4)
-x <- runif(10000)
-## lrm(y~x)
-brier <- mean((y-x)^2)
-brier
-
-
 # plot.Hist
 # --------------------------------------------------------------------
 

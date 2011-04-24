@@ -16,7 +16,7 @@
   method.
 }
 \usage{
-Hist(time, event, id = NULL, cens.code = "0")
+Hist(time, event, entry=NULL, id = NULL, cens.code = "0",addInitialState=FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -35,6 +35,10 @@ Hist(time, event, id = NULL, cens.code = "0")
     form of storing the data of a multi state model -- see
     \code{Details}. 
   }
+  \item{entry}{
+    Vector of delayed entry times  (left-truncation) or list of two
+    times when the entry time is interval censored.
+  }
   \item{id}{
     Identifies the subjects to which multiple events belong
     for the longitudinal
@@ -46,6 +50,9 @@ Hist(time, event, id = NULL, cens.code = "0")
     observations in the
     values of \code{event}.     
     Defaults to "0" which is equivalent to 0.
+  }
+  \item{addInitialState}{
+    If TRUE, an initial state is added to all ids for the longitudinal input form of a multi-state model.
   }
 }
 \details{
@@ -115,7 +122,7 @@ Hist(time, event, id = NULL, cens.code = "0")
   is stored in an attribute "states". 
 }
 % \references{}
-\author{Thomas A. Gerds \email{tag@biostat.ku.dk}}
+\author{Thomas A. Gerds \email{tag@biostat.ku.dk}, Arthur Allignol \email{arthur.allignol@fdm.uni-freiburg.de}}
 \seealso{\code{\link{plot.Hist}}, \code{\link{summary.Hist}}, \code{\link{prodlim}}}
 \examples{
 
@@ -162,10 +169,10 @@ MultiStateFrame1 <- data.frame(time=1:10,
 with(MultiStateFrame1,Hist(time,event=list(from,to)))
 
 ## Using the longitudinal input method 
-MultiStateFrame2 <- data.frame(time=rep(1,10),
-			      event=c(1,2,3,0,1,2,4,2,1,2),
-			      id=c(1,1,1,1,2,2,2,2,3,3))
-with(MultiStateFrame2,Hist(time,event,id))
+% MultiStateFrame2 <- data.frame(time=rep(1,10),
+			      % event=c(1,2,3,0,1,2,4,2,1,2),
+			      % id=c(1,1,1,1,2,2,2,2,3,3))
+% with(MultiStateFrame2,Hist(time,event=event,id=id))
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

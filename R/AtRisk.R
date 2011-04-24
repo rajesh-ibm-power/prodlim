@@ -1,7 +1,8 @@
-AtRisk <- function(x,
+atRisk <- function(x,
                    newdata,
                    times,
                    line,
+                   col,
                    interspace,
                    cex,
                    labels,
@@ -49,15 +50,27 @@ AtRisk <- function(x,
   # --------------------------------------------------------------------
   if (is.null(adjust.labels) || adjust.labels==TRUE){
     labels <- format(labels,justify="left")}
+  if (length(col)==nlines/2) ## 1 cluster level
+    col <- c(col,col)
   lapply(1:nlines,function(y){
     mtext(text=as.character(sumx[[y]]),
           side=1,
           at=times,
           line=rep(line[y],length(times)),
+          col=rep(col[y],length(times)),
           cex=cex,
           outer=FALSE,
           xpd=NA,
           ...)
-    mtext(text=labels[y],side=1,at=pos,line=line[y],adj=adj,cex=cex,outer=FALSE,xpd=NA,...)
+    mtext(text=labels[y],
+          side=1,
+          at=pos,
+          col=col[y],
+          line=line[y],
+          adj=adj,
+          cex=cex,
+          outer=FALSE,
+          xpd=NA,
+          ...)
   })
 }

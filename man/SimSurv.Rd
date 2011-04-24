@@ -40,13 +40,14 @@ SimSurv(N,
 }
 \details{
   \code{surv.dist} name of the function to draw the survival distribution
-  \code{surv.baseline} the baseline risk
+  \code{surv.args} list of extra arguments to \code{surv.dist}.
+  \code{surv.baseline} the baseline risk 
   \code{surv.link} names of the link to the covariates
   \code{surv.coef} numeric vector of regression coefficients. the ith is
     used for the ith entry of \code{cova}
   \code{surv.transform} list of function names one for each covariate. the ith is applied
     to values of the ith covariate before it is linked to generate the
-    survival times. 
+    survival times.
   \code{cens.dist} name of the function to draw the censoring distribution
   \code{cens.args} list of extra arguments to \code{dist}
   \code{cens.baseline} the baseline risk
@@ -122,10 +123,84 @@ SurvData=SimSurv(100,cens.baseline=1/10,surv.baseline=2,surv.coef=c(-1,-2),cens.
           cova=list( X.exp = list(dist = "rexp", rate = 0.4),
           X.bernoulli = list(dist = "rbinom", size = 1, prob = 0.3)))
 
+set.seed(8)
+SurvFrame <- SimSurv(N=100,
+		     surv=list(dist = "rweibull",args = list(shape=1),baseline = 1/100,link="exp",coef=1),
+		     cens=list(dist = "rexp",args=NULL,baseline=1/1000,link="exp",coef=0,max = 150,type = "interval",lateness=1,unit=10),
+		     cova=list(Age = list("rnorm", mean = 0, sd = 2),Sex = list("rbinom", size=1,prob=.5)),
+		     keep.uncensored=TRUE,
+		     method=c("simulation"),
+		     verbose=1)
+
 \dontrun{
+
+
+
+library(survival)
 coxph(Surv(time,status==0)~X.exp+X.bernoulli,data=SurvData)
 
 coxph(Surv(time,status)~X.exp+X.bernoulli,data=SurvData)
+
+# Simulate survival times based on a parametric survival fit
+
+library(survival)
+data(ovarian)
+fitSurv <- survreg(Surv(futime,fustat)~age+rx,data=ovarian)
+fitCens <- survreg(Surv(futime,1-fustat)~age+rx,data=ovarian)
+# note: survreg fits the accelerated failure time model version of the
+#       Weibull survival regression model. 
+#       The parameters need to be transformed in order to
+#       simulate from a fitted model using SimSurv:
+survCoef <- -fitSurv$coef[-1]/fitSurv$scale
+survBaseline <- exp(-fitSurv$coef["(Intercept)"]/fitSurv$scale)
+survShape <- 1/fitSurv$scale
+
+censCoef <- -fitCens$coef[-1]/fitCens$scale
+censBaseline <- exp(-fitCens$coef["(Intercept)"]/fitCens$scale)
+censShape <- 1/fitCens$scale
+X <- model.frame(~age+rx,data=ovarian)
+
+simuData <- SimSurv(N=26,
+		    cova=X,
+		    surv.coef=survCoef,
+		    surv.baseline=survBaseline,
+		    surv.shape=survShape,
+                    cens.model="Cox-Weibull",
+		    cens.coef=censCoef,
+		    cens.baseline=censBaseline,
+		    cens.shape=censShape)
+
+simuFit <- survreg(Surv(time,status)~age+rx,data=simuData)
+cbind(coef(simuFit),coef(fit))
+
+plot(prodlim(Surv(time,status)~rx,data=simuData),confint=F)
+plot(prodlim(Surv(futime,fustat)~rx,data=ovarian),confint=F,add=TRUE,lty=2)
+
+## another example
+
+surv.coef=c(0.1, 0.03, -0.5, 0.5) 
+cens.coef=c(0.1, 0.03,-0.5, 0.5) 
+variables=list( 
+     x1=list(dist="rnorm", mean=26, sd=2), 
+     x2=list(dist="rnorm", mean=50, sd=7), 
+     x3=list(dist="rbinom", size=1, prob=0.2), 
+     x4=list(dist="rbinom", size=1, prob=0.5)) 
+surv.base<-0.00001 
+cens.base<-0.00009 
+sim.dat<-SimSurv(N=500,
+		 cova=variables,
+		 surv.coef=surv.coef,
+		 cens.coef=cens.coef,
+		 surv.model="Cox-exponential",
+		 cens.model="Cox-exponential",
+		 surv.baseline=surv.base,
+		 cens.baseline=cens.base,
+		 verbose=F)
+
+
+
+
+
 }
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

@@ -1,13 +1,27 @@
 useDynLib(prodlim)
 
 export("Hist",
+       "getEvent",
+       "getStates",
        "NN",
        "neighborhood",
+       "meanNeighbors",
        "predictSurvIndividual",
        "prodlim",
        "row.match",
        "sindex",
-       "SimSurv")
+       "jackknife",
+       "jackknife.survival",
+       "jackknife.competing.risks",
+       "leaveOneOut",
+       "leaveOneOut.survival",
+       "leaveOneOut.competing.risks",
+       "SmartControl",
+       "SimSurv",
+       "plotIllnessDeathModel",
+       ## "plotCompetingRiskModel",
+       "backGround",
+       "quantile.prodlim")
 
 S3method(print,Hist)
 S3method(summary,Hist)
@@ -16,10 +30,6 @@ S3method(print,neighborhood)
 S3method(print,prodlim)
 S3method(summary,prodlim)
 S3method(predict,prodlim)
+## S3method(quantile,prodlim)
 S3method(plot,prodlim)
-
-# since version 1.1.1
-#S3method(jackknife,survival)
-#S3method(jackknife,competing.risks)
-#S3method(quantile,prodlim)
 

@@ -33,7 +33,6 @@
   message(#"Predictor space:\n\n",
           switch(x$covariate.type,"No covariates",c("Discrete predictor variables: ",discrete.predictors),
                  c("Continuous predictors: ",continuous.predictors),c("  Discrete predictor variables: ",discrete.predictors,"\nContinuous predictor variables: ",continuous.predictors)))
-  ##   message("\nResponse:")
   if (match("Hist",all.names(x$formula),nomatch=FALSE))
     summary(x$model.response,verbose=TRUE)
   else{

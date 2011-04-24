@@ -21,9 +21,9 @@
 
 require(survival)
 require(prodlim)
-data(pbc)
-survHistory1 <- Surv(pbc$time,pbc$status)
-survHistory2 <- Hist(pbc$time,pbc$status)
+d <- SimSurv(10)
+survHistory1 <- Surv(d$time,d$status)
+survHistory2 <- Hist(d$time,d$status)
 
 # both objects hold the same information:
 stopifnot(all(unclass(survHistory1)==unclass(survHistory2)))
@@ -45,7 +45,7 @@ compRiskHistory1 <- Hist(time=1:5,event=c("cause 1","cause 2","cause 3", 0,"caus
 plot(compRiskHistory1,layout=list(nrow=3,ncol=3,box.pos=list(c(2,2),c(1,1),c(1,3),c(3,1),c(3,3))),arrow.lab.offset=5)
 
 compRiskHistory2 <- Hist(time=1:5,event=c("Cancer","Heart attack","Car\naccident", 0,"Murder"))
-plot(compRiskHistory2,layout=list(nrow=3,ncol=3,box.pos=list(c(2,2),c(1,1),c(1,3),c(3,1),c(3,3))),arrow.lab.offset=5,state.cex=1.8,xbox.rule=.1,ybox.rule=.4,enumerate.boxes=TRUE)
+plot(compRiskHistory2,layout=list(nrow=3,ncol=3,box.pos=list(c(2,2),c(1,1),c(1,3),c(3,1),c(3,3))),arrow.lab.offset=5,state.cex=1.8,xbox.rule=.1,ybox.rule=.4,tagBoxes=TRUE)
 
 # in a multi state model events occur in a certain order
 # --------------------------------------------------------------------
@@ -56,14 +56,9 @@ illness.death.frame <- data.frame(time=1:4,
 		      "Diseased","Disease-free"),
 		    to=c("0","Diseased","Dead","Dead"))
 
-IDHist <- with(illness.death.frame,
-	       Hist(time,event=list(from,to)))
-plot(IDHist,
-     ybox.rule=4,
-     xbox.rule=.3,
-     state.cex=1.3,
-     enum=TRUE,
-     arrow.lab.side=c(-1,-1,1))
+IDHist <- with(illness.death.frame,Hist(time,event=list(from,to)))
+plot(IDHist,ybox.rule=4,xbox.rule=.3,state.cex=1.3,enum=TRUE,arrow.lab.side=c(-1,-1,1))
+
 
 ## illness-death with recovery
 illness.death.frame2 <- data.frame(time=1:5,

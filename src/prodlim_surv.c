@@ -42,7 +42,7 @@ void prodlim_surv(double *y,
       if (*reverse==1)
 	pl_step(&surv_temp, &hazard_temp, &varhazard_temp, atrisk, loss[s], event[s]);
       else
-	pl_step(&surv_temp, &hazard_temp, &varhazard_temp, atrisk, event[s],0);
+	pl_step(&surv_temp, &hazard_temp, &varhazard_temp, atrisk, event[s], 0);
       surv[s]=surv_temp;
       hazard[s]=hazard_temp;
       varhazard[s] = varhazard_temp;

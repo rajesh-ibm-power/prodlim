@@ -8,6 +8,7 @@ predictSurvIndividual <- function(object,
   else{
     N <- length(obs.times)
     findex <- row.match(object$model.matrix,object$X)
+    ## browser()
     psurv <- .C("predict_individual_survival",
                 pred=double(N),
                 as.double(object$surv),
