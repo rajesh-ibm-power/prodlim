@@ -1,8 +1,7 @@
 ## The function `Hist' (short for history) generalizes
 ## the function `Surv' which is defined in the survival package
 
-# first test: a two state survival model 
-# --------------------------------------------------------------------
+# {{{ two state survival model 
 
 ## If the status variable takes only two values, then `Surv' and
 ## `Hist' do more or less the same. The attributes and the
@@ -15,6 +14,15 @@
 ## stopifnot(all(unclass(sH1)==unclass(sH2)))
 ## summary(sH1)
 ## summary(sH2)
+
+set.seed(10)
+d <- SimSurv(100)
+f <- prodlim(Hist(time,status)~1,data=d)
+sum <- summary(f,times=d$time)
+
+library(survival)
+fcontrol <- survfit(Surv(time,status)~1,data=d)
+sumcontrol <- summary(fcontrol,times=d$time)
 
 # second test: a competing risk model 
 # --------------------------------------------------------------------
@@ -50,11 +58,11 @@
 pfit <- prodlim(Hist(time,status)~1,data=dat)
 all(round(pfit$surv,10)==round(survfit(Surv(time,status)~1,data=dat)$surv,10))
 
-## dat <- SimSurv(100)
-## a <- prodlim(Hist(time,status)~1,data=dat)
+dat <- SimSurv(100)
+a <- prodlim(Hist(time,status)~1,data=dat)
 ## b <- prodlim(Surv(time,status)~1,data=dat,reverse=TRUE)
 ## c <- prodlim(Surv(time,status)~X2,data=dat,reverse=TRUE)
-## d <- prodlim(Surv(time,status)~NN(X1),data=dat,reverse=TRUE)
+d <- prodlim(Surv(time,status)~NN(X1),data=dat,reverse=TRUE)
 
 ## class(c) <- "dynamic"
 #cluster

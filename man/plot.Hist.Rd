@@ -17,6 +17,7 @@ Box-arrow diagrams for multi-state models.
           arrowLabels,
           arrowLabelStyle="symbolic",
           arrowLabelSymbol="lambda",
+          changeArrowLabelSide,
           tagBoxes=FALSE,
           startCountZero=TRUE,
           oneFitsAll,
@@ -54,6 +55,10 @@ Box-arrow diagrams for multi-state models.
  }
  \item{arrowLabelSymbol}{
    Symbol for automated symbolic arrow labels. Defaults to "lambda".
+ }
+ \item{changeArrowLabelSide}{
+   A vector of mode logical (TRUE,FALSE) one for each arrow to change
+   the side of the arrow on which the label is placed. 
  }
  \item{tagBoxes}{
    Logical. If TRUE the boxes are numbered in the upper
@@ -113,6 +118,14 @@ plot(SurvHist)
 plot(SurvHist,box2.col=2,box2.label="experienced\nR user")
 plot(SurvHist,box2.col=2,box1.label="newby",box2.label="experienced\nR
 user",oneFitsAll=F,arrow1.length=.5,arrow1.label="",arrow1.lwd=4)
+
+## change the cex of all box labels:
+plot(SurvHist,box2.col=2,box1.label="newby",box2.label="experienced\nR
+user",oneFitsAll=F,arrow1.length=.5,arrow1.label="",arrow1.lwd=4,label.cex=1)
+
+## change the cex of single box labels:
+plot(SurvHist,box2.col=2,box1.label="newby",box2.label="experienced\nR
+user",oneFitsAll=FALSE,arrow1.length=.5,arrow1.label="",arrow1.lwd=4,label1.cex=1,label2.cex=2)
 
 
 ## The pbc data set from the survival package

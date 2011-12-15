@@ -17,8 +17,16 @@ backGround <- function(xlim,
       ybot <- sort(unique(c(ylim[1],horizontal,ylim[2])))
       NR <- length(ybot)
       bcol <- rep(bg,length.out=NR)
-      for (r in 1:(NR-1))
-        rect(xleft=xlim[1],xright=xlim[2],ybottom=ybot[r],ytop=ybot[r+1],density=100,col=bcol[r],border=FALSE)
+      nix <- sapply(1:(NR-1),function(r){
+        ## for (r in 1:(NR-1)){
+        ## rect(xleft=xlim[1],xright=xlim[2],ybottom=ybot[r],ytop=ybot[r+1],col=bcol[r],border=FALSE)
+        ## polygon(x=c(xlim[1],xlim[1],xlim[2],xlim[2],xlim[1]),
+        polygon(x=c(U[1],U[1],U[2],U[2],U[1]),
+                y=c(ybot[r],ybot[r+1],ybot[r+1],ybot[r],ybot[r]),
+                col=bcol[r],
+                border=FALSE)
+        ## do NOT specify: density=100 as this slows this down!
+      })
     }
   }
   # grid 

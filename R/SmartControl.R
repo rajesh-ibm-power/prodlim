@@ -18,7 +18,6 @@ SmartControl <- function(call,
     names(SmartArgs) <- tolower(names(SmartArgs))
   }
   # }}}
-
   # {{{remove ignorable arguments
   if (!missing(ignore) && is.character(ignore)){
     if (ignore.case==TRUE){
@@ -65,7 +64,6 @@ SmartControl <- function(call,
     names(replaceDefaults) <- keys
   }
   
-
   # }}}
   # {{{ forced arguments
   keyForced <- vector(mode="list",length=length(keys))
@@ -105,18 +103,20 @@ SmartControl <- function(call,
       keyArgs <- NULL
     }
     # }}}
-  # {{{ prepending the forced arguments-----------------
-  if (length(keyForced[[k]])>0){
+    # {{{ prepending the forced arguments-----------------
+    if (length(keyForced[[k]])>0){
       keyArgs <- c(keyForced[[k]],keyArgs)
     }
     # }}}
-  # {{{ appending default arguments
+    # {{{ appending default arguments
     if (length(DefaultArgs[[k]])>0 && replaceDefaults[k]==FALSE){
       keyArgs <- c(keyArgs,DefaultArgs[[k]])
     }
     # }}}
-  # {{{ removing duplicates
-    keyArgs[!duplicated(names(keyArgs))]
+    # {{{ removing duplicates
+    if (!is.null(names(keyArgs))){
+      keyArgs[!duplicated(names(keyArgs))]
+    }
   })
   
   names(keyArgList) <- keys

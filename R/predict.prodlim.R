@@ -64,7 +64,6 @@
     names.strata <- NULL
   }
   else {
-
     # conditional on factors
     # --------------------------------------------------------------------
     if (missing(newdata)) stop("Argument newdata is missing.")

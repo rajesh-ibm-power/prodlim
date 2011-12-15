@@ -15,8 +15,9 @@ neighborhood(x, bandwidth = NULL, kernel = "box")
     random variate.}
   \item{bandwidth}{Controls the distance between neighbors in a
     neighborhood. It can be a decimal, i.e.\ the bandwidth, or the string
-    `"smooth"', in which case the fourth root of the sample
-    size is used, or \code{NULL} in which case the \code{\link{dpik}}
+    `"smooth"', in which case \code{N^{-1/4}} is used, \code{N} being the
+    sample size,
+    or \code{NULL} in which case the \code{\link{dpik}}
     function of the package KernSmooth is used to find the optimal
     bandwidth.}
   \item{kernel}{Only the rectangular kernel ("box") is implemented.}

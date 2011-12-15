@@ -22,7 +22,7 @@ SimCompRisk <- function(N,
   NP <- NCOL(X.matrix)
   cova <- smartA$cova
   # }}}
-  # {{{ sampling the cause
+  # {{{ sampling the cause and latent times
   lp1 <- resolveLinPred(X=X.matrix,coef=cuminc1$coef)
   lp2 <- resolveLinPred(X=X.matrix,coef=cuminc2$coef)
   elp <- (exp(lp1)/(1+exp(lp1)))
@@ -51,10 +51,12 @@ SimCompRisk <- function(N,
   if (is.numeric(cens$max)) cens.time <- pmin(cens.time, cens$max)
   # }}}
   # {{{ event time and censoring status
+
   surv.time <- numeric(N)
   surv.time[cause==1] <- T1
   surv.time[cause==2] <- T2
   status <- as.numeric(surv.time <= cens.time)
+
   # }}}
   # {{{ return data frame
   out <- data.frame(cbind(time = pmin(surv.time, cens.time),status = status,cause=cause*(status>0),ucens.cause=cause,ucens.time=surv.time,cens.time=cens.time))

@@ -104,6 +104,18 @@
           stop("Dont know the order of transitions for interval censored observations.")
         }
         else{
+          if (addInitialState==TRUE){
+            time <- c(rep(0,length(unique(id))),time)
+            if (is.factor(event)){
+              event <- factor(c(rep("initial",length(unique(id))),as.character(event)),levels=c("initial",levels(event)))
+            }
+            else{
+              stopifnot(match("initial",unique(event),nomatch=0)==0)
+              event <- c(rep("initial",length(unique(id))),event)
+            }
+            id <- c(unique(id),id)
+            ## status <- c(rep(cens.code,length(unique(id))),status)
+          }
           # 1. sort the observations by id and time
           sorted <- order(id,time)
           time <- time[sorted]
@@ -112,22 +124,22 @@
           event <- event[sorted]
           # time <- time[duplicated(id)] ## remove the resp. first time
           # status <- status[duplicated(id)]
-          if (addInitialState==TRUE){
-            from=unlist(lapply(split(event,id),function(x){c("initial",x[-length(x)])}))
-            to=event
-          }else{
-            if (length(unique(id))!=sum(time==0))
-              stop("There are ",length(unique(id))," different individuals (id's), but the state at time 0 is available for ",sum(time==0)," id's.")
-            initialState <- event[time==0]
-            last.id <- c(diff(id[sorted]) != 0, 1)
-            first.id <- c(1, diff(id[sorted]) != 0)
-            from <- event[last.id!=1]
-            to <- event[first.id!=1]
-          }
+          if (length(unique(id))!=sum(time==0))
+            stop("There are ",length(unique(id))," different individuals (id's), but the state at time 0 is available for ",sum(time==0)," id's.")
+          initialState <- event[time==0]
+          last.id <- c(diff(id) != 0, 1)
+          first.id <- c(1, diff(id) != 0)
+          from <- factor(event[last.id!=1])
+          to <- factor(event[first.id!=1])
+          id <- id[time!=0]
+          time <- time[time!=0]
           # 2. get back to the original order
-          time <- time[sorted]
-          id <- id[sorted]
-          event <- event[sorted]
+          ### cannot easily get back since
+          ### length(time) < sorted
+          ## time <- time[sorted]
+          ## id <- id[sorted]
+          ## event <- event[sorted]
+          status <- rep(1,length(to))
           status[is.na(to) | is.infinite(to) | as.character(to)==cens.code] <- 0
         }
       }
@@ -202,7 +214,7 @@
     # {{{  multi.state models
 
     if (any(as.character(from)==as.character(to))) stop("Data contain transitions from state x to state x")
-    
+
     eventISfactor <- as.numeric(is.factor(from)) + as.numeric(is.factor(to))
 
     if (eventISfactor==1) stop("Components of event have different classes")
@@ -214,22 +226,21 @@
     
     states <- as.character(states[states!=cens.code])
     ## states <- states[match(state.order,states)]
-
-    if (cens.code %in% levels(from)) stop("Code for censored data used wrongly in argument event")
-
     if (cens.code %in% levels(from)) stop("Code for censored data used wrongly in argument event")
 
     if (cens.type=="intervalCensored"){
       if (entry.type=="intervalCensored")
         history <- cbind(U=U,V=V,L=L,R=R,status=status,from=as.integer(factor(from,levels=c(states,cens.code))),to=as.integer(factor(to,levels=c(states,cens.code))))
-      else
+      else{
         history <- cbind(entry = entry,L=L,R=R,status=status,from=as.integer(factor(from,levels=c(states,cens.code))),to=as.integer(factor(to,levels=c(states,cens.code))))
+      }
     }
     else{
       if (entry.type=="intervalCensored")
         history <- cbind(U=U,V=V,time=time,status=status,from=as.integer(factor(from,levels=c(states,cens.code))),to=as.integer(factor(to,levels=c(states,cens.code))))
-      else
+      else{
         history <- cbind(entry = entry,time=time,status=status,from=as.integer(factor(from,levels=c(states,cens.code))),to=as.integer(factor(to,levels=c(states,cens.code))))
+      }
     }
   }
 
@@ -246,12 +257,30 @@
   attr(history,"cens.type") <- cens.type
   attr(history,"cens.code") <- as.character(cens.code)
   attr(history,"model") <- model
+  ## print(entry.type)
   attr(history,"entry.type") <- entry.type
   history
   # }}}
 }
 
-
+subset.Hist <- function(x,subset,select,drop){
+  if (missing(select)){
+    xx <- x
+    class(xx) <- "matrix"
+    xx <- subset(xx,subset=subset,drop=drop)
+    attr(xx,"class") <- attr(x,"class")
+    attr(xx,"states") <- attr(x,"states")
+    attr(xx,"model") <- attr(x,"model")
+    attr(xx,"cens.type") <- attr(x,"cens.type")
+    attr(xx,"cens.code") <- attr(x,"cens.code")
+    attr(xx,"entry.type") <- attr(x,"entry.type")
+    xx
+  }
+  else{
+    class(x) <- "matrix"
+    NextMethod("subset")
+  }
+}
 
 "[.Hist" <- function(x,i,j,drop=FALSE){
   if (missing(j)){
@@ -264,7 +293,6 @@
     attr(xx,"cens.type") <- attr(x,"cens.type")
     attr(xx,"cens.code") <- attr(x,"cens.code")
     attr(xx,"entry.type") <- attr(x,"entry.type")
-        
     xx
   }
   else{

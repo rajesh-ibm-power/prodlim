@@ -4,13 +4,15 @@ SimSurv <- function(N,
                     cova,
                     verbose=1,
                     ...){
-  
+  # {{{  argument control
   default.surv.args <- list(model="Cox-Weibull",shape=1,baseline=1/100,link="exp",coef=c(1,-1),transform=NULL)
   default.cens.args <- list(model="Cox-exponential",baseline=1/100,link="exp",max=NULL,type="right",coef=NULL,transform=NULL)
   if (missing(cova))
     default.cova.args <- list(X1=list("rnorm",mean=0,sd=2),X2=list("rbinom",size=1,prob=.5))
-  else
+  else{
+    if (length(cova)>0 && is.null(names(cova))) names(cova) <- paste("X",1:length(cova))
     default.cova.args <- cova
+  }
   smartA <- SmartControl(call=match.call(expand=TRUE),
                          keys=c("surv","cens","cova"),
                          defaults=list("surv"=default.surv.args,
@@ -28,11 +30,17 @@ SimSurv <- function(N,
   if (!is.null(surv$dist)) {warning("Argument surv.dist is depreciated. please use surv.model instead.")}
   if (!censnotwanted)
     if (!is.null(cens$dist)) {warning("Argument surv.dist is depreciated. please use surv.model instead.")}
+ # }}}
   
-  # ------------------------resolving covariates------------------------
-  X.matrix <- do.call(resolveX,c(list(N=N),object=list(smartA$cova)))
+  # {{{ resolving covariate design matrix
+  X.matrix <- do.call(resolveX,
+                      c(list(N=N),object=list(smartA$cova)))
   NP <- NCOL(X.matrix)
-  # -----------special links between survival and covariates-----------
+  # }}}
+
+  # ------------------------------survival------------------------------
+
+  # {{{ special links between survival and covariates
   if (length(surv$transform)>0){
     survSpecials <- TRUE
     surv.X <- transformX(X=X.matrix,transform=surv$transform,transName="f")
@@ -41,29 +49,22 @@ SimSurv <- function(N,
     survSpecials <- FALSE
     surv.X <- X.matrix
   }
-  
-  # ------------------resolving the linear predictors------------------
-
+  # }}}
+  # {{{ linear predictors and simulate survival times
   linpred.surv <- resolveLinPred(X=surv.X,coef=surv$coef,verbose=verbose)
-  
-  # ---------------------------survival time---------------------------
   survTime.args=surv[match(c("N", "model", "link", "baseline", "linpred", "shape", "min", "max"),names(surv),nomatch=FALSE)]
-  surv.time <- do.call("SimSurvInternal",
-                       c(list(N=N,linpred=linpred.surv),
-                         survTime.args))
+  surv.time <- do.call("SimSurvInternal",c(list(N=N,linpred=linpred.surv),survTime.args))
   ##   surv.time <- SimSurvInternal(N=N,model=surv$model,args=surv$args,link=surv$link,baseline=surv$baseline,linpred=linpred.surv)
+  # }}}
   
   # ---------------------------censoring----------------------------
 
-  #  if (!censnotwanted && length(cens$type)>0)
-  #    censType <- match(cens$type,c("interval","right"),nomatch=0)
-
+    # {{{ do nothing if no censoring wanted
   if (censnotwanted==TRUE)
     cens.time <- rep(Inf,N)
+  # }}}
+    # {{{ special links between right censoring and covariates-----------
   else{
-    
-    # --------special links between right censoring and covariates-----------
-    
     if (length(cens$transform)>0){
       censSpecials <- TRUE
       cens.X <- transformX(X=X.matrix,transform=cens$transform,transName="f")
@@ -72,37 +73,31 @@ SimSurv <- function(N,
       censSpecials <- FALSE
       cens.X <- X.matrix
     }
-    
+    # }}}
+    # {{{ linear predictors and simulate censoring times
     linpred.cens <- resolveLinPred(X=cens.X,coef=cens$coef,verbose=verbose)
-
     censTime.args=cens[match(c("N", "model", "link", "baseline", "linpred", "shape", "min", "max"),names(cens),nomatch=FALSE)]
     cens.time <- do.call("SimSurvInternal",c(list(N=N,linpred=linpred.cens),censTime.args))
     ##     cens.time <- SimSurvInternal(N=N,model=cens$model,args=cens$args,link=cens$link,baseline=cens$baseline,linpred=linpred.cens)
-    
+    # }}}
+    # {{{ look for a maximal observation time
     if (is.numeric(cens$max)) cens.time <- pmin(cens.time, cens$max)
-
-    
+    # }}}
+    # {{{ interval censored
     if (!censnotwanted && cens$type=="interval"){
       if (is.null(cens$compliance)) cens$compliance <- .95
       if (is.null(cens$unit)) cens$unit <- round(median(cens.time)/3,2)
       if (is.null(cens$lateness)) cens$lateness <- round(median(cens.time)/30,2)
-      icens <- SimSurvInternalIntervalCensored(N=N,
-                                               unit=cens$unit,
-                                               lateness=cens$lateness,
-                                               compliance=cens$compliance,
-                                               withdraw.time=cens.time,
-                                               event.time=surv.time)
+      icens <- SimSurvInternalIntervalCensored(N=N,unit=cens$unit,lateness=cens$lateness,compliance=cens$compliance,withdraw.time=cens.time,event.time=surv.time)
     }
+    # }}}
   }
-  # ------the censoring status: 0= right, 1= observed, 2= interval------
-
+  # {{{ the censoring status: 0= right, 1= observed, 2= interval------
   status <- as.numeric(surv.time <= cens.time)
+  # }}}
 
-  # ------------------------preparing the output------------------------
-  out <- data.frame(cbind(time = pmin(surv.time, cens.time),
-                          status = status,
-                          uncensored.time=surv.time,
-                          cens.time=cens.time))
+  # {{{ preparing the output
+  out <- data.frame(cbind(time = pmin(surv.time, cens.time),status = status,uncensored.time=surv.time,cens.time=cens.time))
   if (!is.null(X.matrix)) out <- cbind(out,X.matrix)
   if (survSpecials) out <- cbind(out,surv.X[0<match(names(surv.X),names(out),nomatch=0)])
   if (!censnotwanted){
@@ -116,28 +111,28 @@ SimSurv <- function(N,
         out$status[out$L==out$R] <- 1
       }
     }}
-  # --------------------------sorting the data--------------------------
-  
   out <- out[order(out$time,-out$status),]
+  # }}}
   
-
-  
-  # -----------------reporting the censoring percentage-----------------
+  # {{{ report the censoring percentage
 
   if (verbose>0){
     cat(paste(round(100 * sum((1 - out$status>0))/N), "% right censoring"), "\n")
   }
-  
-  # -----------------------adding some attributes-----------------------
+  # }}}
+  # {{{ adding some attributes and return object
   
   attr(out,"formula") <- formula("Hist(time,status)~1")
   attr(out,"call") <- match.call()
   class(out) <- c("SimSurv",class(out))
   row.names(out) <- rep(1:N)
   out
+  # }}}
 }
 
+# --------------------------helper functions--------------------------
 
+# {{{ SimSurvInternal
 SimSurvInternal <- function(N,
                             model,
                             link,
@@ -147,16 +142,11 @@ SimSurvInternal <- function(N,
                             min,
                             max){
   if (length(linpred)==0) linpred <- 0
-  Stime <- switch(model,
-                  "uniform"= runif(N,min,max),
-                  "Cox-exponential"= (1/baseline) * (-log(runif(N)) * exp(-linpred)),
-                  "Cox-Weibull"={(- (log(runif(N)) * (1 / baseline) * exp(-linpred)))^(1/shape)},
-                  "Cox-Gompertz"=(1/shape) * log(1 - (shape/baseline) * (log(runif(N)) * exp(-linpred))))
+  Stime <- switch(model,"uniform"= runif(N,min,max),"Cox-exponential"= (1/baseline) * (-log(runif(N)) * exp(-linpred)),"Cox-Weibull"={(- (log(runif(N)) * (1 / baseline) * exp(-linpred)))^(1/shape)},"Cox-Gompertz"=(1/shape) * log(1 - (shape/baseline) * (log(runif(N)) * exp(-linpred))))
   Stime
 }
-
-
-
+# }}}
+# {{{ SimSurvInternalTimeVarying
 SimSurvInternalTimeVarying <- function(N,dist, args, coef, baseline, x, fun){
   #  idea from yanqing sun:
   # lambda = 1/sqrt(t) * exp(sqrt(t)) 
@@ -172,7 +162,8 @@ SimSurvInternalTimeVarying <- function(N,dist, args, coef, baseline, x, fun){
   #    Stime
   #  })
 }
-
+# }}}
+# {{{ SimSurvInternalIntervalCensored
 SimSurvInternalIntervalCensored <- function(N,
                                             unit,
                                             lateness,
@@ -212,7 +203,8 @@ SimSurvInternalIntervalCensored <- function(N,
   out <- data.frame(Intervals)
   out
 }
-  
+# }}}
+# {{{ find.baseline
 find.baseline <- function(x=.5,
                           setting,
                           verbose=FALSE){
@@ -228,7 +220,8 @@ find.baseline <- function(x=.5,
   do.call("SimSurv",replace(new.setting,"verbose",TRUE))
   new.setting
 }
-
+# }}}
+# {{{quantile.SimSurv
 quantile.SimSurv <- function(x,B=10,na.rm=FALSE,probs=.9){
   callx <- attr(x,"call")
   nix <- do.call("rbind",lapply(1:B,function(b){
@@ -237,4 +230,4 @@ quantile.SimSurv <- function(x,B=10,na.rm=FALSE,probs=.9){
   nix <- colMeans(nix)
   nix
 }
-
+# }}}

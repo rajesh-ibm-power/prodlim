@@ -14,7 +14,6 @@
 \method{summary}{prodlim}(object,
 		times,
 		newdata,
-		verbose = TRUE,
 		max.tables = 20,
                 surv=TRUE,
                 cause,
@@ -37,9 +36,6 @@
     A data frame with the same variable names as those that
     appear on the right hand side of the 'prodlim' formula.
     Defaults to \code{object$model.matrix}.
-  }
-  \item{verbose}{
-    If FALSE supress all warnings and the printing of the summary. 
   }
   \item{max.tables}{
     Integer. If \code{newdata} is not given the value of

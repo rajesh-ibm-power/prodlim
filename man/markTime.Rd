@@ -8,7 +8,7 @@
   This function is invoked and controlled by \code{plot.prodlim}.
 }
 \usage{
-markTime(x, times, nlost, pch, col)
+markTime(x, times, nlost, pch, col,...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -26,6 +26,9 @@ markTime(x, times, nlost, pch, col)
   }
   \item{col}{
     The color of the symbols.
+  }
+  \item{...}{
+    Arguments passed to \code{points}.
   }
 }
 \details{

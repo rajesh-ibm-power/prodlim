@@ -5,6 +5,7 @@ plot.Hist <- function(x,
                       arrowLabels,
                       arrowLabelStyle="symbolic",
                       arrowLabelSymbol='lambda',
+                      changeArrowLabelSide,
                       tagBoxes=FALSE,
                       startCountZero=TRUE,                      
                       oneFitsAll,
@@ -105,8 +106,18 @@ plot.Hist <- function(x,
   if (model.type=="multi.states"){
     adjustRowsInColumn <- rep(0,ncol)
     adjustColsInRow <- rep(0,nrow)
-    box.col <- switch(as.character(NS),"2"=c(1,ncol),"3"=c(1,2,ncol),"4"=c(1,1,ncol,ncol),"5"=c(1,1,ceiling((ncol-1)/2),ncol,ncol))
-    box.row <- switch(as.character(NS),"2"=c(1,1),"3"=c(nrow,1,nrow),"4"=c(1,nrow,1,nrow),"5"=c(1,nrow,ceiling(nrow/2),1,nrow))
+    box.col <- switch(as.character(NS),
+                      "2"=c(1,ncol),
+                      "3"=c(1,2,ncol),
+                      "4"=c(1,1,ncol,ncol),
+                      "5"=c(1,1,ceiling((ncol-1)/2),ncol,ncol),
+                      "6"=c(1,3,3,5,6,6))
+    box.row <- switch(as.character(NS),
+                      "2"=c(1,1),
+                      "3"=c(nrow,1,nrow),
+                      "4"=c(1,nrow,1,nrow),
+                      "5"=c(1,nrow,ceiling(nrow/2),1,nrow),
+                      "6"=c(3,1,6,4,1,6))
   }
   else{ # survival or competing risks
     ## adjustRowsInColumn <- rep(1,ncol)
@@ -119,6 +130,8 @@ plot.Hist <- function(x,
       box.row <- c((NS+1)/2,(1:NS)[-(NS+1)/2])
     }
   }
+  if (is.null(box.row) || is.null(box.col))
+    stop("Please specify the layout for this ",NS," state model (")
   layoutDefaults <- data.frame(name=paste("box",1:NS,sep=""),
                                row=box.row,
                                column=box.col,
@@ -147,8 +160,10 @@ plot.Hist <- function(x,
     theCex <- 2
   else
     theCex <- cex
-  arrowLabel.cex <- rep(theCex,N)
-  
+  if (found <- match("arrowLabel.cex",names(thecall),nomatch=0))
+    arrowLabel.cex <- thecall[[found]]
+  else
+    arrowLabel.cex <- rep(theCex,N)
   ## boxes
   boxDefaults <- data.frame(name=paste("box",1:NS,sep=""),xpd=TRUE,stringsAsFactors=FALSE)
   ## box labels
@@ -157,7 +172,14 @@ plot.Hist <- function(x,
   arrowDefaults <- data.frame(name=paste("arrow",1:N,sep=""),code=2,lwd=1,headoffset=strwidth("ab",cex=arrowLabel.cex),length=.13,stringsAsFactors=FALSE)
   arrowDefaults <- cbind(arrowDefaults,ordered.transitions)
   ## arrowlabels
-  arrowlabelDefaults <- data.frame(name=paste("arrowlabel",1:N,sep=""),label=arrowLabelStyle,x=NA,y=NA,stringsAsFactors=FALSE,cex=arrowLabel.cex)
+  if (missing(changeArrowLabelSide))
+    changeArrowLabelSide <- rep(FALSE,N)
+  arrowlabelDefaults <- data.frame(name=paste("arrowlabel",1:N,sep=""),
+                                   label=arrowLabelStyle,
+                                   x=NA,
+                                   y=NA,
+                                   stringsAsFactors=FALSE,
+                                   cex=arrowLabel.cex)
   arrowlabelDefaults <- cbind(arrowlabelDefaults,ordered.transitions)
 
   arrowlabelDefaults$numfrom <- factor(arrowlabelDefaults$from,levels=states,labels=numstateLabels)
@@ -204,11 +226,14 @@ plot.Hist <- function(x,
         boxLabelCex[i] <- thecall[[argi]]
     }
   }
-  
   ## state.cex <- max(boxLabelCex)
-  state.width <- sapply(stateLabs,strwidth,cex=boxLabelCex)
-  state.height <- sapply(stateLabs,strheight,cex=boxLabelCex)
-  
+  if (length(boxLabelCex)<length(stateLabs))
+    boxLabelCex <- rep(boxLabelCex,length.out=length(stateLabs))
+  state.width <- sapply(1:length(stateLabs),function(i){strwidth(stateLabs[i],cex=boxLabelCex[i])})
+  state.height <- sapply(1:length(stateLabs),function(i){strheight(stateLabs[i],cex=boxLabelCex[i])})
+  ## state.width <- sapply(stateLabs,strwidth,cex=boxLabelCex)
+  ## state.height <- sapply(stateLabs,strheight,cex=boxLabelCex)
+
   if (missing(oneFitsAll))
     oneFitsAll <- length(unique(boxLabelCex))==1
   if (oneFitsAll==TRUE){
@@ -226,6 +251,7 @@ plot.Hist <- function(x,
     box.width <- state.width + strwidth("ab",cex=boxLabelCex)
     box.height <- state.height + strwidth("ab",cex=boxLabelCex)
   }
+
   if (length(box.height)==1) box.height <- rep(box.height,NS)
   if (length(box.width)==1) box.width <- rep(box.width,NS)
   # }}}
@@ -329,7 +355,6 @@ plot.Hist <- function(x,
     ArrowHeadOffset <- arrowDefaults[trans,"headoffset"]
     from <- from+sign(ArrowDirection)*c(ArrowHeadOffset,ArrowHeadOffset)*abs(ArrowDirection)
     to <- to-sign(ArrowDirection)*c(ArrowHeadOffset,ArrowHeadOffset)*abs(ArrowDirection)
-    
     arrowDefaults[trans,"x0"] <- from[1]
     arrowDefaults[trans,"x1"] <- to[1]
     arrowDefaults[trans,"y0"] <- from[2]
@@ -338,6 +363,9 @@ plot.Hist <- function(x,
     offset <- strwidth(".",cex=arrowLabel.cex)
     ArrowMid <- (to+from)/2
     ## points(x=ArrowMid[1],y=ArrowMid[2],col=3,pch=16)
+    if (changeArrowLabelSide[trans]==TRUE)
+    ArrowLabelPos <- ArrowMid - sign(PerDir) * c(offset,offset)
+    else
     ArrowLabelPos <- ArrowMid + sign(PerDir) * c(offset,offset)
     try1 <- try(mode((arrowLabels[[trans]])[2])[[1]]=="call",silent=TRUE)
     ## try2 <- try(as.character(arrowLabels[[trans]])[[1]]=="paste",silent=TRUE)
@@ -352,6 +380,9 @@ plot.Hist <- function(x,
     ## relative label width 
     labelWidth <-  strwidth(lab,cex=arrowlabelDefaults[trans,"cex"])
     ## shift further according to label height and width in perpendicular direction
+    if (changeArrowLabelSide[trans]==TRUE)
+      ArrowLabelPos <- ArrowLabelPos-sign(PerDir)*c(labelWidth/2,labelHeight/2)
+    else
     ArrowLabelPos <- ArrowLabelPos+sign(PerDir)*c(labelWidth/2,labelHeight/2)
     arrowlabelDefaults[trans,"x"] <- ArrowLabelPos[1] 
     arrowlabelDefaults[trans,"y"] <- ArrowLabelPos[2]
@@ -378,9 +409,11 @@ plot.Hist <- function(x,
 
   # }}}
   # {{{  draw the boxes
+
   for (i in 1:NS) {
     suppressWarnings(do.call("rect",smartArgs[[paste("box",i,sep="")]]))
   }
+
   # }}}
   # {{{  label the boxes
   
@@ -390,9 +423,11 @@ plot.Hist <- function(x,
 
   # }}}
   # {{{  draw the arrows
+
   for (i in 1:N){
     suppressWarnings(do.call("arrows",c(smartArgs[[paste("arrow",i,sep="")]])))
   }
+
   # }}}
   # {{{ label the arrows
   if (arrowLabels.p==TRUE){
