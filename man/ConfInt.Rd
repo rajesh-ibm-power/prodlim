@@ -10,7 +10,7 @@
   This function is invoked and controlled by \code{plot.prodlim}. 
 }
 \usage{
-confInt(x, times, newdata, type, citype, cause, col, lty, lwd, density=55, exact=FALSE, ...)
+confInt(x, times, newdata, type, citype, cause, col, lty, lwd, density=55, ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -45,11 +45,6 @@ confInt(x, times, newdata, type, citype, cause, col, lty, lwd, density=55, exact
   }
   \item{density}{
     For \code{citype="shadow"}, the density of the shade. Default is 55 percent.
-  }
-  \item{exact}{
-    If \code{TRUE} the shadow border follows the upper and lower
-    confidence limits at *all* timepoints, otherwise 100 time points are
-    found as \code{seq(min(x$times),max(x$times),diff(range(x$times)/100))}.
   }
   \item{\dots}{
     Further arguments that are passed to the function \code{segments} if

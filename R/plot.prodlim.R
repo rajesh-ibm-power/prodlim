@@ -1,4 +1,5 @@
 # {{{ Header
+
 plot.prodlim <- function(x,
                          type,
                          cause=1,
@@ -22,7 +23,7 @@ plot.prodlim <- function(x,
                          percent=TRUE,
                          minAtrisk=0,
                          ...){
-  
+
   # }}}
   # {{{  backward compatibility
   ##   args=match.call(expand=TRUE)
@@ -33,6 +34,7 @@ plot.prodlim <- function(x,
   }
   # }}}
   # {{{  extracting a list of lines to draw
+
   cens.type <- x$cens.type    # uncensored, right or interval censored
   if (cens.type=="intervalCensored") confint <- FALSE
   if (cens.type=="intervalCensored") atrisk <- FALSE
@@ -53,15 +55,23 @@ plot.prodlim <- function(x,
     plot.times <- sort(unique(x$time))
     if (plot.times[1]>timeOrigin) plot.times <- c(timeOrigin,plot.times)
   }
-  if (minAtrisk>0 && any(x$n.risk<=minAtrisk)){
-    criticalTime <- min(x$time[x$n.risk<=minAtrisk])
+  if (length(x$clustervar)>0)
+    nRisk <- x$n.risk[,1]
+  else
+    nRisk <- x$n.risk
+  if (minAtrisk>0 && any(nRisk<=minAtrisk)){
+
+    if (all(nRisk<=minAtrisk)){
+      return(plot(0,0,type="n",xlim=c(0, max(plot.times)),ylim=c(0, 1),axes=FALSE))
+    }
+    criticalTime <- min(x$time[nRisk<=minAtrisk])
     plot.times <- plot.times[plot.times<criticalTime]
   }
   if (missing(newdata)) newdata <- x$X
   if (NROW(newdata)>10) newdata <- newdata[c(1,round(median(1:NROW(newdata))),NROW(newdata)),,drop=FALSE]
   
   if (length(cause)!=1){
-    warning("Currently only the cumulative incidence of a single cause can be plotted in one go. Use argument add=TRUE to add the lines of the other causes.")
+    warning("Currently only the cumulative incidence of a single cause can be plotted in one go. Use argument add=TRUE to add the lines of the other causes. For now I use the first cause")
     cause <- cause[1]
   }
   ## Y <- predict(x,times=plot.times,newdata=newdata,level.chaos=1,type=type,cause=cause,mode="list")
@@ -80,6 +90,7 @@ plot.prodlim <- function(x,
                   newdata=newdata,
                   stats=stats,
                   percent=FALSE)
+
   if (model=="competing.risks") sumX=sumX[[cause]]
   if (cotype==1) sumX=list(sumX)
   if (model=="survival" && type=="cuminc"){
@@ -92,7 +103,7 @@ plot.prodlim <- function(x,
   }
 
   # }}}
-  # {{{  getting arguments for plot, atrisk, axes, legend, confint, marktime
+  # {{{  getting default arguments for plot, atrisk, axes, legend, confint, marktime
 
   if (missing(ylab)) ylab <- switch(type,"surv"=ifelse(x$reverse==TRUE,"Censoring probability","Survival probability"),"cuminc"="Cumulative incidence","hazard"="Cumulative hazard")
   if (missing(xlab)) xlab <- "Time"
@@ -105,19 +116,22 @@ plot.prodlim <- function(x,
   if (length(lty) < nlines) lty <- rep(lty, nlines)
   if (length(col) < nlines) col <- rep(col, nlines)
   
-  background.DefaultArgs <- list(xlim=xlim,
-                                 ylim=ylim,
-                                 horizontal=seq(0,1,.25),
-                                 vertical=NULL,
-                                 bg="gray77",
-                                 fg="white")
+  background.DefaultArgs <- list(xlim=xlim,ylim=ylim,horizontal=seq(0,1,.25),vertical=NULL,bg="white",fg="gray88")
   axis1.DefaultArgs <- list()
   axis2.DefaultArgs <- list(at=seq(0,1,.25),side=2)
   lines.DefaultArgs <- list(type="s")
   plot.DefaultArgs <- list(x=0,y=0,type = "n",ylim = ylim,xlim = xlim,xlab = xlab,ylab = ylab)
-  marktime.DefaultArgs <- list(x=Y,nlost=lapply(sumX,function(x)x[,"n.lost"]),times=plot.times,type=type,cause=cause,pch="I",col=col)
+  marktime.DefaultArgs <- list(x=Y,nlost=lapply(sumX,function(x)x[,"n.lost"]),times=plot.times,pch="I",col=col)
   atrisk.DefaultArgs <- list(x=x,newdata=newdata,interspace=1,dist=.3,col=col,times=seq(0,min(x$maxtime,xlim[2]),min(x$maxtime,xlim[2])/10))
-  legend.DefaultArgs <- list(legend=names(Y),lwd=lwd,col=col,lty=lty,cex=1.5,bty="n",y.intersp=1.3,trimnames=FALSE,x="topright")
+  legend.DefaultArgs <- list(legend=names(Y),
+                             lwd=lwd,
+                             col=col,
+                             lty=lty,
+                             cex=1.5,
+                             bty="n",
+                             y.intersp=1.3,
+                             trimnames=TRUE,
+                             x="topright")
   confint.DefaultArgs <- list(x=x,newdata=newdata,type=type,citype="shadow",times=plot.times,cause=cause,density=55,col=col[1:nlines],lwd=rep(2,nlines),lty=rep(3,nlines))
 
   # }}}
@@ -146,6 +160,7 @@ plot.prodlim <- function(x,
 
 # }}}
   # {{{  setting margin parameters 
+
   if (atrisk==TRUE){
     oldmar <- par()$mar
     if (missing(automar) || automar==T){
@@ -160,8 +175,9 @@ plot.prodlim <- function(x,
       par(mar=newmar)
     }
   }
+
   # }}}
-  # {{{  plot and backGround 
+  # {{{  plot and backGround
   if (!add) {
     do.call("plot",smartA$plot)
     ##     if (background==TRUE && match("bg",names(smartA$background),nomatch=FALSE)){
@@ -190,6 +206,7 @@ plot.prodlim <- function(x,
     ## if (verbose==TRUE){print(smartA$confint)}
     do.call("confInt",smartA$confint)
   }
+
   # }}}
   # {{{  adding the lines 
   lines.type <- smartA$lines$type
@@ -205,8 +222,9 @@ plot.prodlim <- function(x,
   # {{{  marks at the censored times
 
   if (marktime==TRUE){
-    if (model %in% c("survival","competing.risks"))
+    if (model %in% c("survival","competing.risks")){
       do.call("markTime",smartA$marktime)
+    }
     else{
       message("Marking the curves at censored times is not yet available for multi-state models.")
     }
@@ -229,10 +247,12 @@ plot.prodlim <- function(x,
   }
   # }}}
   # {{{  legend
+
   if(legend==TRUE && !add && !is.null(names(Y))){
 
     if (smartA$legend$trimnames==TRUE){
       smartA$legend$legend <- sapply(strsplit(names(Y),"="),function(x)x[[2]])
+      smartA$legend$title <- unique(sapply(strsplit(names(Y),"="),function(x)x[[1]]))
     }
     smartA$legend <- smartA$legend[-match("trimnames",names(smartA$legend))]
     save.xpd <- par()$xpd
@@ -243,8 +263,5 @@ plot.prodlim <- function(x,
 
 # }}}
   invisible(x)
+
 }
-
-
-
-

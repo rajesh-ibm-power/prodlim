@@ -53,7 +53,8 @@
   ##          stop("Response must be a survival or event history object created with `Surv' or `Hist'."))
   #  if (force.multistate==TRUE) model.type <- 3
   event.history <- response
-  ##   print(unclass(response))
+  ## print(attributes(response))
+  ## print(cens.type)
   if (cens.type!="intervalCensored"){
     event.time.order <- order(event.history[,"time"],-event.history[,"status"])
   }
@@ -61,7 +62,7 @@
     event.time.order <- order(event.history[,"L"],-event.history[,"status"])
   }
   
-# }}}
+  # }}}
   # {{{  covariates
   
   covariates <- model.specials(m,special)
@@ -339,7 +340,19 @@
   }
   # }}}
   # {{{ return object of class "prodlim"
-  out <- list("call"=call,"formula"=formula,"model.response"=event.history,"X"=X,"model.matrix"=model.matrix,"discrete.predictors"=discrete.predictors,"continuous.predictors"=continuous.predictors,"clustervar"=clustervar,"covariate.type"=cotype,"cens.type"=cens.type,"conf.int"=conf.int,"reverse"=reverse)
+  out <- list("call"=call,
+              "formula"=formula,
+              "model.response"=event.history,
+              "originalDataOrder"=order(event.time.order),
+              "X"=X,
+              "model.matrix"=model.matrix,
+              "discrete.predictors"=discrete.predictors,
+              "continuous.predictors"=continuous.predictors,
+              "clustervar"=clustervar,
+              "covariate.type"=cotype,
+              "cens.type"=cens.type,
+              "conf.int"=conf.int,
+              "reverse"=reverse)
   if (cotype %in% c(3,4)) out <- c(out,list("bandwidth"=bandwidth))
   out <- c(Cout,out)
   class(out) <-  "prodlim"

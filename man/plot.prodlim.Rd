@@ -85,7 +85,7 @@
   \item{percent}{If true the y-axis is labeled in percent.}
   \item{minAtrisk}{Integer. Show the curve only until the number at-risk is at
     least \code{minAtrisk}}
-  \item{\dots}{Parameters that are filtered and then passed to the
+  \item{\dots}{Parameters that are filtered by \code{\link{SmartControl}} and then passed to the
 functions \code{\link{plot}}, \code{\link{legend}}, \code{\link{axis}},
 \code{\link{atRisk}}, \code{\link{confInt}},
 \code{\link{markTime}}, \code{\link{backGround}}
