@@ -13,7 +13,7 @@ SimSurv <- function(N,
     if (length(cova)>0 && is.null(names(cova))) names(cova) <- paste("X",1:length(cova))
     default.cova.args <- cova
   }
-  smartA <- SmartControl(call=match.call(expand=TRUE),
+  smartA <- SmartControl(call=match.call(expand.dots=TRUE),
                          keys=c("surv","cens","cova"),
                          defaults=list("surv"=default.surv.args,
                            "cens"=default.cens.args,
