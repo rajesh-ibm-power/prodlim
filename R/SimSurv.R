@@ -4,14 +4,21 @@ SimSurv <- function(N,
                     cova,
                     verbose=1,
                     ...){
+  warning("This function is obsolete and will be replaced by corresponding functionality of the lava package.")
   # {{{  argument control
   default.surv.args <- list(model="Cox-Weibull",shape=1,baseline=1/100,link="exp",coef=c(1,-1),transform=NULL)
   default.cens.args <- list(model="Cox-exponential",baseline=1/100,link="exp",max=NULL,type="right",coef=NULL,transform=NULL)
-  if (missing(cova))
+  thecall <- match.call(expand.dots=TRUE)
+  if (missing(cova) && length(grep("cova",names(thecall)))==0){
     default.cova.args <- list(X1=list("rnorm",mean=0,sd=2),X2=list("rbinom",size=1,prob=.5))
+    replaceDefaults.cova <- FALSE
+  }
   else{
-    if (length(cova)>0 && is.null(names(cova))) names(cova) <- paste("X",1:length(cova))
-    default.cova.args <- cova
+    if ((!missing(cova)) && length(cova)>0 && is.null(names(cova)))
+      names(cova) <- paste("X",1:length(cova))
+    replaceDefaults.cova <- TRUE
+    ## if (!missing(cova))
+    ## default.cova.args <- cova
   }
   smartA <- SmartControl(call=match.call(expand.dots=TRUE),
                          keys=c("surv","cens","cova"),
@@ -20,7 +27,7 @@ SimSurv <- function(N,
                            "cova"=default.cova.args),
                          ignore=c("surv","cens","verbose","N","cova"),
                          ignore.case=FALSE,
-                         replaceDefaults=c("surv"=FALSE,"cens"=FALSE,"cova"=FALSE),
+                         replaceDefaults=c("surv"=FALSE,"cens"=FALSE,"cova"=replaceDefaults.cova),
                          verbose=TRUE)
   surv <- smartA$surv
   censnotwanted <- (!missing(cens) && is.logical(cens) && cens==FALSE)
@@ -142,7 +149,11 @@ SimSurvInternal <- function(N,
                             min,
                             max){
   if (length(linpred)==0) linpred <- 0
-  Stime <- switch(model,"uniform"= runif(N,min,max),"Cox-exponential"= (1/baseline) * (-log(runif(N)) * exp(-linpred)),"Cox-Weibull"={(- (log(runif(N)) * (1 / baseline) * exp(-linpred)))^(1/shape)},"Cox-Gompertz"=(1/shape) * log(1 - (shape/baseline) * (log(runif(N)) * exp(-linpred))))
+  Stime <- switch(model,
+                  "uniform"= runif(N,min,max),
+                  "Cox-exponential"= (1/baseline) * (-log(runif(N)) * exp(-linpred)),
+                  "Cox-Weibull"={(- (log(runif(N)) * (1 / baseline) * exp(-linpred)))^(1/shape)},
+                  "Cox-Gompertz"=(1/shape) * log(1 - (shape/baseline) * (log(runif(N)) * exp(-linpred))))
   Stime
 }
 # }}}
