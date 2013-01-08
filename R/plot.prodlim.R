@@ -124,6 +124,7 @@ plot.prodlim <- function(x,
   marktime.DefaultArgs <- list(x=Y,nlost=lapply(sumX,function(x)x[,"n.lost"]),times=plot.times,pch="I",col=col)
   atrisk.DefaultArgs <- list(x=x,newdata=newdata,interspace=1,dist=.3,col=col,times=seq(0,min(x$maxtime,xlim[2]),min(x$maxtime,xlim[2])/10))
   legend.DefaultArgs <- list(legend=names(Y),lwd=lwd,col=col,lty=lty,cex=1.5,bty="n",y.intersp=1.3,trimnames=!match("legend.legend",names(allArgs),nomatch=0),x="topright")
+  if (NCOL(newdata)>1) legend.DefaultArgs$trimnames <- FALSE
   confint.DefaultArgs <- list(x=x,newdata=newdata,type=type,citype="shadow",times=plot.times,cause=cause,density=55,col=col[1:nlines],lwd=rep(2,nlines),lty=rep(3,nlines))
 
   # }}}
@@ -241,6 +242,7 @@ plot.prodlim <- function(x,
   if(legend==TRUE && !add && !is.null(names(Y))){
     if (smartA$legend$trimnames==TRUE){
       smartA$legend$legend <- sapply(strsplit(smartA$legend$legend,"="),function(x)x[[2]])
+      if (is.null(smartA$legend$title))
       smartA$legend$title <- unique(sapply(strsplit(names(Y),"="),function(x)x[[1]]))
     }
     smartA$legend <- smartA$legend[-match("trimnames",names(smartA$legend))]

@@ -19,10 +19,12 @@ export("Hist",
        "SmartControl",
        "SimSurv",
        "plotIllnessDeathModel",
-       ## "plotCompetingRiskModel",
+       "plotCompetingRiskModel",
        "backGround",
        "PercentAxis",
        "quantile.prodlim")
+
+import(survival,KernSmooth)
 
 S3method(print,Hist)
 S3method(summary,Hist)
