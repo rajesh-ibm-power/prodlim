@@ -142,6 +142,20 @@
 ##' # move legend
 ##' plot(kmfitX,legend.x="bottomleft",atRisk.cex=1.3)
 ##' 
+##' ## Control the order of strata
+##' ## unfortunately prodlim does not obey the order of
+##' ## factor levels
+##' dat$group <- factor(cut(dat$X2,c(-Inf,0,0.5,Inf)),labels=c("Low","Intermediate","High"))
+##' kmfitG <- prodlim(Hist(time, status) ~ group, data = dat)
+##' plot(kmfitG)
+##' 
+##' ## we want to re-order the labels such
+##' ## that in the legend and in the numbers at-risk
+##' ## "Low" comes before "Intermediate" before "High"
+##' dat$group2 <- as.numeric(dat$group)
+##' kmfitG2 <- prodlim(Hist(time, status) ~ group2, data = dat)
+##' plot(kmfitG2,legend.legend=levels(dat$group),atrisk.labels=levels(dat$group))
+##' 
 ##' # add log-rank test to legend
 ##' plot(kmfitX,
 ##'      atRisk.cex=1.3,
@@ -401,18 +415,18 @@ plot.prodlim <- function(x,
 # {{{  setting margin parameters 
 
   if (atrisk==TRUE){
-    oldmar <- par()$mar
-    if (missing(automar) || automar==TRUE){
-      ##        bottomMargin =  margin line (in 'mex' units) for xlab
-      ##                        + distance of xlab from xaxis
-      ##                        + distance of atrisk numbers from xlab
-      ##                        + number of atrisk lines
-      ##                        + one extra line below the bottom number atrisk line
-      ##      leftSideMargin =  margin line + atrisk.lab
-      bottomMargin <- par()$mgp[2] + smartA$atrisk$dist+ ifelse(clusterp,2,1)*nlines + 1
-      newmar <- par()$mar + c(bottomMargin,0,0,0)
-      par(mar=newmar)
-    }
+      oldmar <- par()$mar
+      if (missing(automar) || automar==TRUE){
+          ##        bottomMargin =  margin line (in 'mex' units) for xlab
+          ##                        + distance of xlab from xaxis
+          ##                        + distance of atrisk numbers from xlab
+          ##                        + number of atrisk lines
+          ##                        + one extra line below the bottom number atrisk line
+          ##      leftSideMargin =  margin line + atrisk.lab
+          bottomMargin <- par()$mgp[2] + smartA$atrisk$dist+ ifelse(clusterp,2,1)*nlines + 1
+          newmar <- par()$mar + c(bottomMargin,0,0,0)
+          par(mar=newmar)
+      }
   }
 
   # }}}

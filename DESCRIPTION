@@ -1,7 +1,7 @@
 Package: prodlim
 Title: Product-limit estimation. Kaplan-Meier and Aalen-Johansson
         method for censored event history (survival) analysis
-Version: 1.4.2
+Version: 1.4.3
 Author: Thomas A. Gerds
 Description: Fast and user friendly implementation of nonparametric estimators
     for censored event history (survival) analysis.
@@ -9,7 +9,7 @@ Depends: R (>= 1.9.1)
 Imports: stats, survival, KernSmooth, lava
 Maintainer: Thomas A. Gerds <tag@biostat.ku.dk>
 License: GPL (>= 2)
-Packaged: 2014-01-14 05:34:36 UTC; tag
+Packaged: 2014-05-01 05:37:57 UTC; tag
 Collate: 'Hist.R' 'IntIndex.R' 'NN.R' 'PercentAxis.R' 'PetoInt.R'
         'SimCompRisk.R' 'SimSurv.R' 'SmartControl.R' 'atRisk.R'
         'backGround.R' 'cluster.R' 'confInt.R' 'contrastMethods.R'
@@ -30,4 +30,4 @@ Collate: 'Hist.R' 'IntIndex.R' 'NN.R' 'PercentAxis.R' 'PetoInt.R'
         'leaveOneOut.R' 'getStates.R'
 NeedsCompilation: yes
 Repository: CRAN
-Date/Publication: 2014-01-14 07:14:04
+Date/Publication: 2014-05-01 07:52:36
