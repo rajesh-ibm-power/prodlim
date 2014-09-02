@@ -2,12 +2,11 @@
 \alias{prodlim}
 \title{product limit method}
 \usage{
-  prodlim(formula, data = parent.frame(), subset,
-    na.action, reverse = FALSE, conf.int = 0.95,
-    bandwidth = NULL, caseweights, discrete.level = 3,
-    maxiter = 1000, grid, tol = 7,
-    method = c("npmle", "one.step", "impute.midpoint", "impute.right"),
-    exact = TRUE)
+prodlim(formula, data = parent.frame(), subset = NULL,
+  na.action = options()$na.action, reverse = FALSE, conf.int = 0.95,
+  bandwidth = NULL, caseweights, discrete.level = 3, x = TRUE,
+  maxiter = 1000, grid, tol = 7, method = c("npmle", "one.step",
+  "impute.midpoint", "impute.right"), exact = TRUE)
 }
 \arguments{
   \item{formula}{A formula whose left hand side is a
@@ -37,8 +36,8 @@
   \item{conf.int}{The level (between 0 and 1) for two-sided
   pointwise confidence intervals. Defaults to 0.95.}
 
-  \item{bandwidth}{Smoothing parameter for symmetric
-  nearest neighborhoods based on the values of a continuous
+  \item{bandwidth}{Smoothing parameter for nearest
+  neighborhoods based on the values of a continuous
   covariate. See function \code{neighborhood} for details.}
 
   \item{caseweights}{Weights applied to the contribution of
@@ -53,17 +52,23 @@
   is applied, in overlapping neighborhoods according to the
   bandwidth.}
 
+  \item{x}{logical value: if \code{TRUE}, the full
+  covariate matrix with is returned in component
+  \code{model.matrix}. The reduced matrix contains unique
+  rows of the full covariate matrix and is always returned
+  in component \code{X}.}
+
   \item{maxiter}{For interval censored data only.  Maximal
   number of iterations to obtain the nonparametric maximum
   likelihood estimate. Defaults to 1000.}
 
-  \item{grid}{For interval censored data only.  When
+  \item{grid}{For interval censored data only. When
   method=one.step grid for one-step product limit estimate.
   Defaults to sorted list of unique left and right
   endpoints of the observed intervals.}
 
-  \item{tol}{For interval censored data only.  Numeric
-  value whose negative exponential is used as convergence
+  \item{tol}{For interval censored data only. Numeric value
+  whose negative exponential is used as convergence
   criterion for finding the nonparametric maximum
   likelihood estimate.  Defaults to 7 meaning exp(-7).}
 
@@ -77,68 +82,68 @@
   observed intervals.}
 }
 \value{
-  Object of class "prodlim" for which there are print,
-  predict, life.table, summary and plot methods.
+Object of class "prodlim". See \code{\link{print.prodlim}},
+\code{\link{predict.prodlim}}, predict,
+\code{\link{summary.prodlim}}, \code{\link{plot.prodlim}}.
 }
 \description{
-  Nonparametric estimation in event history analysis.
-  Featuring fast algorithms and user friendly syntax
-  adapted from the survival package.  The product limit
-  algorithm is used for right censored data; the
-  self-consistency algorithm for interval censored data.
+Nonparametric estimation in event history analysis.
+Featuring fast algorithms and user friendly syntax adapted
+from the survival package.  The product limit algorithm is
+used for right censored data; the self-consistency
+algorithm for interval censored data.
 }
 \details{
-  The response of \code{formula} (ie the left hand side of
-  the `~' operator) specifies the model.
+The response of \code{formula} (ie the left hand side of
+the `~' operator) specifies the model.
 
-  In two-state models -- the classical survival case -- the
-  standard Kaplan-Meier method is applied.  For this the
-  response can be specified as a \code{\link{Surv}} or as a
-  \code{\link{Hist}} object. The \code{\link{Hist}}
-  function allows you to change the code for censored
-  observations, e.g.
-  \code{Hist(time,status,cens.code="4")}.
+In two-state models -- the classical survival case -- the
+standard Kaplan-Meier method is applied.  For this the
+response can be specified as a \code{\link{Surv}} or as a
+\code{\link{Hist}} object. The \code{\link{Hist}} function
+allows you to change the code for censored observations,
+e.g. \code{Hist(time,status,cens.code="4")}.
 
-  Besides a slight gain of computing efficiency, there are
-  some extensions that are not included in the current
-  version of the survival package:
+Besides a slight gain of computing efficiency, there are
+some extensions that are not included in the current
+version of the survival package:
 
-  (0) The Kaplan-Meier estimator for the censoring times
-  \code{reverse=TRUE} is correctly estimated when there are
-  ties between event and censoring times.
+(0) The Kaplan-Meier estimator for the censoring times
+\code{reverse=TRUE} is correctly estimated when there are
+ties between event and censoring times.
 
-  (1) A conditional version of the Kaplan-Meier estimator
-  for at most one continuous predictors using symmetrical
-  nearest neighborhoods (Beran 1981, Stute 1984, Akritas
-  1994).
+(1) A conditional version of the kernel smoothed
+Kaplan-Meier estimator for at most one continuous
+predictors using nearest neighborhoods (Beran 1981, Stute
+1984, Akritas 1994).
 
-  (2) For cluster-correlated data the right hand side of
-  \code{formula} may identify a \code{\link{cluster}}
-  variable. In that case Greenwood's variance formula is
-  replaced by the formula of Ying \& Wei (1994).
+(2) For cluster-correlated data the right hand side of
+\code{formula} may identify a \code{\link{cluster}}
+variable. In that case Greenwood's variance formula is
+replaced by the formula of Ying \& Wei (1994).
 
-  (3) Competing risk models can be specified via
-  \code{\link{Hist}} response objects in \code{formula}.
+(3) Competing risk models can be specified via
+\code{\link{Hist}} response objects in \code{formula}.
 
-  The Aalen-Johannsen estimator is applied for estimating
-  the cumulative incidence functions for all causes.  The
-  advantage over the function \code{cuminc} of the cmprsk
-  package are user-friendly model specification via
-  \code{\link{Hist}} and sophisticated print, summary,
-  predict and plot methods.
+The Aalen-Johannsen estimator is applied for estimating the
+cumulative incidence functions for all causes.  The
+advantage over the function \code{cuminc} of the cmprsk
+package are user-friendly model specification via
+\code{\link{Hist}} and sophisticated print, summary,
+predict and plot methods.
 
-  Under construction:
+Under construction:
 
-  (U0) Interval censored event times specified via
-  \code{\link{Hist}} are used to find the nonparametric
-  maximum likelihood estimate. Currently this works only
-  for two-state models and the results should match with
-  those from the package `Icens'.
+(U0) Interval censored event times specified via
+\code{\link{Hist}} are used to find the nonparametric
+maximum likelihood estimate. Currently this works only for
+two-state models and the results should match with those
+from the package `Icens'.
 
-  (U1) Extensions to more complex multi-states models
+(U1) Extensions to more complex multi-states models
 
-  (U2) The nonparametric maximum likelihood estimate for
-  interval censored observations of competing risks models.
+(U2) The nonparametric maximum likelihood estimate for
+interval censored observations of competing risks models.
 }
 \examples{
 ##---------------------two-state survival model------------
@@ -234,35 +239,35 @@ summary(fitd)
 plot(fitd)
 }
 \author{
-  Thomas A. Gerds \email{tag@biostat.ku.dk}
+Thomas A. Gerds \email{tag@biostat.ku.dk}
 }
 \references{
-  Andersen, Borgan, Gill, Keiding (1993) Springer
-  `Statistical Models Based on Counting Processes'
+Andersen, Borgan, Gill, Keiding (1993) Springer
+`Statistical Models Based on Counting Processes'
 
-  Akritas (1994) The Annals of Statistics 22, 1299-1327
-  Nearest neighbor estimation of a bivariate distribution
-  under random censoring.
+Akritas (1994) The Annals of Statistics 22, 1299-1327
+Nearest neighbor estimation of a bivariate distribution
+under random censoring.
 
-  R Beran (1981) http://anson.ucdavis.edu/~beran/paper.html
-  `Nonparametric regression with randomly censored survival
-  data'
+R Beran (1981) http://anson.ucdavis.edu/~beran/paper.html
+`Nonparametric regression with randomly censored survival
+data'
 
-  Stute (1984) The Annals of Statistics 12, 917--926
-  `Asymptotic Normality of Nearest Neighbor Regression
-  Function Estimates'
+Stute (1984) The Annals of Statistics 12, 917--926
+`Asymptotic Normality of Nearest Neighbor Regression
+Function Estimates'
 
-  Ying, Wei (1994) Journal of Multivariate Analysis 50,
-  17-29 The Kaplan-Meier estimate for dependent failure
-  time observations
+Ying, Wei (1994) Journal of Multivariate Analysis 50, 17-29
+The Kaplan-Meier estimate for dependent failure time
+observations
 }
 \seealso{
-  \code{\link{predictSurv}},
-  \code{\link{predictSurvIndividual}},
-  \code{\link{predictCuminc}}, \code{\link{Hist}},
-  \code{\link{neighborhood}}, \code{\link{Surv}},
-  \code{\link{survfit}}, \code{\link{strata}},
-  \code{\link{cluster}}, \code{\link{NN}}
+\code{\link{predictSurv}},
+\code{\link{predictSurvIndividual}},
+\code{\link{predictCuminc}}, \code{\link{Hist}},
+\code{\link{neighborhood}}, \code{\link{Surv}},
+\code{\link{survfit}}, \code{\link{strata}},
+\code{\link{cluster}}, \code{\link{NN}}
 }
 \keyword{cluster}
 \keyword{nonparametric}

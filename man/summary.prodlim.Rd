@@ -2,9 +2,9 @@
 \alias{summary.prodlim}
 \title{Summary method for prodlim objects.}
 \usage{
-  \method{summary}{prodlim} (object, times, newdata,
-    max.tables = 20, surv = TRUE, cause, intervals = FALSE,
-    percent = FALSE, showTime = TRUE, ...)
+\method{summary}{prodlim}(object, times, newdata, max.tables = 20,
+  surv = TRUE, cause, intervals = FALSE, percent = FALSE,
+  showTime = TRUE, ...)
 }
 \arguments{
   \item{object}{An object with class `prodlim' derived with
@@ -15,8 +15,7 @@
 
   \item{newdata}{A data frame with the same variable names
   as those that appear on the right hand side of the
-  'prodlim' formula.  Defaults to
-  \code{object$model.matrix}.}
+  'prodlim' formula.  Defaults to \code{object$X}.}
 
   \item{max.tables}{Integer. If \code{newdata} is not given
   the value of \code{max.tables} decides about the maximal
@@ -45,18 +44,18 @@
   print function.}
 }
 \value{
-  A data.frame with the relevant information.
+A data.frame with the relevant information.
 }
 \description{
-  Summarizing the result of the product limit method in
-  life-table format. Calculates the number of subjects at
-  risk and counts events and censored observations at
-  specified times or in specified time intervals.
+Summarizing the result of the product limit method in
+life-table format. Calculates the number of subjects at
+risk and counts events and censored observations at
+specified times or in specified time intervals.
 }
 \details{
-  For cluster-correlated data the number of clusters
-  at-risk are are also given. Confidence intervals are
-  displayed when they are part of the fitted object.
+For cluster-correlated data the number of clusters at-risk
+are are also given. Confidence intervals are displayed when
+they are part of the fitted object.
 }
 \examples{
 SurvFrame <- data.frame(time=1:10,status=rbinom(10,1,.5))
@@ -81,10 +80,10 @@ cbind(names(x$table),do.call("rbind",lapply(x$table,round,2)))
 }
 }
 \author{
-  Thomas A. Gerds \email{tag@biostat.ku.dk}
+Thomas A. Gerds \email{tag@biostat.ku.dk}
 }
 \seealso{
-  \code{\link{prodlim}}, \code{\link{summary.Hist}}
+\code{\link{prodlim}}, \code{\link{summary.Hist}}
 }
 \keyword{survival}
 
