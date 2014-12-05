@@ -105,7 +105,7 @@
 ##'      xlab="Months",
 ##'      axis2.las=2,
 ##'      atrisk.at=seq(0,100,30.25),
-##'      atrisk.label="Patients")
+##'      atrisk.title="Patients")
 ##' 
 ##' # change background color
 ##' plot(kmfit,
@@ -117,7 +117,7 @@
 ##'      xlab="Months",
 ##'      axis2.las=2,
 ##'      atrisk.at=seq(0,100,30.25),
-##'      atrisk.label="Patients",
+##'      atrisk.title="Patients",
 ##'      background=TRUE,
 ##'      background.fg="white",
 ##'      background.horizontal=seq(0,1,.25/2),
@@ -309,8 +309,9 @@ plot.prodlim <- function(x,
   }
   if (confint==TRUE)
       stats=c(stats,list(c("lower",startValue),c("upper",startValue)))
-  if (x$cens.type=="intervalCensored")
-      stop("FIXME")
+  if (x$cens.type=="intervalCensored"){
+      stop("FIXME: There is no plot method implemented for intervalCensored data.")
+  }
   sumX <- lifeTab(x,
                   times=plot.times,
                   newdata=newdata,

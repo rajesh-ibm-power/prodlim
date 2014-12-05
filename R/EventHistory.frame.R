@@ -7,17 +7,26 @@
 ##' @param formula Formula whose left hand side specifies the event
 ##' history, i.e., either via Surv() or Hist().
 ##' @param data Data frame in which the formula is interpreted
-##' @param unspecialsDesign Passed as is to \code{\link{model.design}}.
+##' @param unspecialsDesign Passed as is to
+##' \code{\link{model.design}}.
 ##' @param specials Character vector of special function names.
 ##' Usually the body of the special functions is function(x)x but
 ##' e.g., \code{\link{strata}} from the survival package does treat
 ##' the values
 ##' @param specialsFactor Passed as is to \code{\link{model.design}}.
 ##' @param specialsDesign Passed as is to \code{\link{model.design}}
-##' @param stripSpecialNames Passed as is to \code{\link{model.design}}
-##' @param subset Passed as is to \code{\link{model.frame}}
-##' @param na.action Passed as is to \code{\link{model.frame}}
-##' na.action.
+##' @param stripSpecials Passed as \code{specials} to
+##' \code{\link{strip.terms}}
+##' @param stripArguments Passed as \code{arguments} to
+##' \code{\link{strip.terms}}
+##' @param stripAlias Passed as \code{alias.names} to
+##' \code{\link{strip.terms}}
+##' @param stripUnspecials Passed as \code{unspecials} to
+##' \code{\link{strip.terms}}
+##' @param dropIntercept Passed as is to \code{\link{model.design}}
+##' @param check.formula If TRUE check if formula is a Surv or Hist
+##' thing.
+##' @param response If FALSE do not get response data (event.history).
 ##' @return A list which contains
 ##' - the event.history (see \code{\link{Hist}})
 ##' - the design matrix (see \code{\link{model.design}})
@@ -37,13 +46,11 @@
 ##'                     X4=c(44.69,37.41,68.54,38.85,35.9,27.02,41.84),
 ##'                     X1=factor(c("a","b","a","c","c","a","b"),
 ##'                         levels=c("c","a","b")))
-##' ## define special functions prop and cluster
-##' prop <- function(x)x
-##' cluster <- function(x)x
 ##' ## We pass a formula and the data
 ##' e <- EventHistory.frame(Hist(time,status)~prop(X1)+X2+cluster(X3)+X4,
 ##'                         data=dsurv,
-##'                         specials=c("prop","cluster"))
+##'                         specials=c("prop","cluster"),
+##'                         stripSpecials=c("prop","cluster"))
 ##' names(e)
 ##' ## The first element is the event.history which is result of the left hand
 ##' ## side of the formula:
@@ -60,36 +67,41 @@
 ##' e$design
 ##' ## and a data.frame for the special covariates
 ##' e$prop
-##' ## The special covariates can be returned as a model.matrix 
+##' ## The special covariates can be returned as a model.matrix
 ##' e2 <- EventHistory.frame(Hist(time,status)~prop(X1)+X2+cluster(X3)+X4,
 ##'                          data=dsurv,
 ##'                          specials=c("prop","cluster"),
+##'                          stripSpecials=c("prop","cluster"),
 ##'                          specialsDesign=TRUE)
 ##' e2$prop
 ##' ## and the non-special covariates can be returned as a data.frame
 ##' e3 <- EventHistory.frame(Hist(time,status)~prop(X1)+X2+cluster(X3)+X4,
 ##'                          data=dsurv,
 ##'                          specials=c("prop","cluster"),
+##'                          stripSpecials=c("prop","cluster"),
 ##'                          specialsDesign=TRUE,
 ##'                          unspecialsDesign=FALSE)
 ##' e3$design
 ##' 
-##' ## the idea is that the function is used to parse the combination of
+##' ## the general idea is that the function is used to parse the combination of
 ##' ## formula and data inside another function. Here is an example with
 ##' ## competing risks
 ##' SampleRegression <- function(formula,data=parent.frame()){
 ##'     thecall <- match.call()
-##'     ehf <- EventHistory.frame(formula=formula,data=data,specials=c("prop","timevar"))
+##'     ehf <- EventHistory.frame(formula=formula,
+##'                               data=data,
+##'                               stripSpecials=c("prop","cluster","timevar"),
+##'                               specials=c("prop","timevar","cluster"))
 ##'     time <- ehf$event.history[,"time"]
 ##'     status <- ehf$event.history[,"status"]
 ##'     ## event as a factor
 ##'     if (attr(ehf$event.history,"model")=="competing.risks"){
 ##'         event <- ehf$event.history[,"event"]
 ##'         Event <- getEvent(ehf$event.history)
-##'         data.frame(time,status,event,Event)
+##'         list(response=data.frame(time,status,event,Event),X=ehf[-1])
 ##'     }
 ##'     else{ # no competing risks
-##'         data.frame(time,status)
+##'         list(response=data.frame(time,status),X=ehf[-1])
 ##'     }
 ##' }
 ##' dsurv$outcome <- c("cause1","0","cause2","cause1","cause2","cause2","0")
@@ -100,7 +112,33 @@
 ##' form2 <- Hist(time,outcome)~prop(X1)+cluster(X3)+X4
 ##' ff <- list(form1,form2)
 ##' lapply(ff,function(f){SampleRegression(f,dsurv)})
-##'  
+##' 
+##' 
+##' ## here is what the riskRegression package uses to
+##' ## distinguish between covariates with
+##' ## time-proportional effects and covariates with
+##' ## time-varying effects:
+##' \dontrun{
+##' library(riskRegression)
+##' data(Melanoma)
+##' f <- Hist(time,status)~prop(thick)+strata(sex)+age+prop(ulcer,power=1)+timevar(invasion,test=1)
+##' ## here the unspecial terms, i.e., the term age is treated as prop
+##' ## also, strata is an alias for timvar
+##' 
+##' EHF <- prodlim::EventHistory.frame(formula,
+##'                                    Melanoma[1:10],
+##'                                    specials=c("timevar","strata","prop","const","tp"),
+##'                                    stripSpecials=c("timevar","prop"),
+##'                                    stripArguments=list("prop"=list("power"=0),
+##'                                        "timevar"=list("test"=0)),
+##'                                    stripAlias=list("timevar"=c("strata"),
+##'                                        "prop"=c("tp","const")),
+##'                                    stripUnspecials="prop",
+##'                                    specialsDesign=TRUE,
+##'                                    dropIntercept=TRUE)       
+##' EHF$prop
+##' EHF$timevar
+##' }
 ##' @export 
 ##' @author Thomas A. Gerds <tag@@biostat.ku.dk>
 EventHistory.frame <- function(formula,
@@ -109,53 +147,76 @@ EventHistory.frame <- function(formula,
                                specials,
                                specialsFactor=TRUE,
                                specialsDesign=FALSE,
-                               stripSpecialNames=TRUE,
-                               subset=NULL,
-                               na.action=options()$na.action){
-    # {{{  check if formula is a formula 
-    formula.names <- try(all.names(formula),silent=TRUE)
-    if (!(formula.names[1]=="~")
-        ||
-        (match("$",formula.names,nomatch=0)+match("[",formula.names,nomatch=0)>0)){
-        stop("Invalid specification of formula. Perhaps forgotten right hand side?\nNote that any subsetting, ie data$var or data[,\"var\"], is invalid for this function.")}
-    else
-        if (!(formula.names[2] %in% c("Surv","Hist"))) stop("formula is NOT a proper survival formula,\nwhich must have a `Surv' or `Hist' object as response.")
+                               stripSpecials=NULL,
+                               stripArguments=NULL,
+                               stripAlias=NULL,
+                               stripUnspecials=NULL,
+                               dropIntercept=TRUE,
+                               check.formula=TRUE,
+                               response=TRUE){
+    # {{{  check if formula is a proper formula
+    if (response && check.formula){
+        formula.names <- try(all.names(formula),silent=TRUE)
+        if (!(formula.names[1]=="~")
+            ||
+            (match("$",formula.names,nomatch=0)+match("[",formula.names,nomatch=0)>0)){
+            stop("Invalid specification of formula. Perhaps forgotten right hand side?\nNote that any subsetting, ie data$var or data[,\"var\"], is invalid for this function.")}
+        else{
+            if (!(any(match(c("survival::Surv","Surv","prodlim::Hist","Hist"),
+                            formula.names,nomatch=0))))
+                stop("formula is NOT a proper survival formula,\nwhich must have a `Surv' or `Hist' object as response.")
+        }
+    }
     # }}}
     # {{{call model.frame
     ## data argument is used to resolve '.' see help(terms.formula)
-    Terms <- terms(x=formula, specials=specials, data = data)
-    if (sum(sapply(c("Surv","Hist"),function(x) length(grep(x,Terms[[2]])>0)))==0)
-        stop("Expected a 'Surv'-object or a 'Hist'-object on the left hand side of the formula.")
-    if (is.null(subset))
-        m <- model.frame(formula=Terms,data=data,subset=NULL,na.action=na.action)
-    else
-        m <- model.frame(formula=Terms,data=data,subset=subset,na.action=na.action)
-    if (NROW(m) == 0) stop("No (non-missing) observations")
-    # }}}
-    # {{{ extract response 
-    event.history <- model.extract(m, "response")
-    # }}}
-    # {{{ Fix for those who use `Surv' instead of `Hist' 
-    if (match("Surv",class(event.history),nomatch=0)!=0){
-        attr(event.history,"model") <- "survival"
-        attr(event.history,"cens.type") <- "rightCensored"
-        attr(event.history,"entry.type") <- ifelse(ncol(event.history)==2,"","leftTruncated")
-        if (attr(event.history,"entry.type")=="leftTruncated")
-            colnames(event.history) <- c("entry","time","status")
+    Terms <- terms(x=formula,specials=specials,data=data)
+    if (!is.null(stripSpecials)){
+        ## Terms <- terms(x=formula, specials=specials)
+        if (length(attr(Terms,"term.labels"))>0)
+            Terms <- strip.terms(Terms,
+                                 specials=stripSpecials,
+                                 arguments=stripArguments,
+                                 alias.names=stripAlias,
+                                 unspecials=stripUnspecials)
     }
     # }}}
+    # {{{ get all variables and remove missing values
+    ## use the stripped formula because, otherwise
+    ## it may be hard to know what variables are, e.g.,
+    ## FGR uses cov2(var,tf=qfun) where qfun is a function 
+    mm <- na.omit(get_all_vars(formula(Terms),data))
+    if (NROW(mm) == 0) stop("No (non-missing) observations")
+    # }}}
+
+    # {{{ extract response
+    if (response==TRUE && attr(Terms,"response")!=0){
+        event.history <- model.response(model.frame(update(formula,".~1"),
+                                                    data=mm))
+        # }}}
+        # {{{ Fix for those who use `Surv' instead of `Hist' 
+        if (match("Surv",class(event.history),nomatch=0)!=0){
+            attr(event.history,"model") <- "survival"
+            attr(event.history,"cens.type") <- "rightCensored"
+            attr(event.history,"entry.type") <- ifelse(ncol(event.history)==2,"","leftTruncated")
+            if (attr(event.history,"entry.type")=="leftTruncated")
+                colnames(event.history) <- c("entry","time","status")
+        }
+        # }}}
+    }else event.history <- NULL
     # {{{ design
-    design <- model.design(data=m,
+    design <- model.design(Terms,
+                           data=mm,
                            maxOrder=1,
-                           dropIntercept=TRUE,
+                           dropIntercept=dropIntercept,
                            unspecialsDesign=unspecialsDesign,
                            specialsFactor=specialsFactor,
-                           specialsDesign=specialsDesign,
-                           stripSpecialNames=stripSpecialNames)
+                           specialsDesign=specialsDesign)
     # }}}
     out <- c(list(event.history=event.history),
              design[sapply(design,length)>0])
-    attr(out,"na.action") <- attr(m,"na.action")
+    attr(out,"Terms") <- Terms
+    attr(out,"na.action") <- attr(mm,"na.action")
     class(out) <- "EventHistory.frame"
     out
 }

@@ -2,11 +2,11 @@
 \alias{prodlim}
 \title{product limit method}
 \usage{
-prodlim(formula, data = parent.frame(), subset = NULL,
-  na.action = options()$na.action, reverse = FALSE, conf.int = 0.95,
-  bandwidth = NULL, caseweights, discrete.level = 3, x = TRUE,
-  maxiter = 1000, grid, tol = 7, method = c("npmle", "one.step",
-  "impute.midpoint", "impute.right"), exact = TRUE)
+prodlim(formula, data = parent.frame(), subset, na.action = NULL,
+  reverse = FALSE, conf.int = 0.95, bandwidth = NULL, caseweights,
+  discrete.level = 3, x = TRUE, maxiter = 1000, grid, tol = 7,
+  method = c("npmle", "one.step", "impute.midpoint", "impute.right"),
+  exact = TRUE)
 }
 \arguments{
   \item{formula}{A formula whose left hand side is a
@@ -23,18 +23,19 @@ prodlim(formula, data = parent.frame(), subset = NULL,
   \item{data}{A data.frame in which all the variables of
   \code{formula} can be interpreted.}
 
-  \item{subset}{Expression identifying a subset of the rows
-  of the data for the fitting process.}
+  \item{subset}{Passed as argument \code{subset} to
+  function \code{subset} which applied to \code{data}
+  before the formula is processed.}
 
-  \item{na.action}{A missing-data filter function, applied
-  to the model.frame, after any subset argument has been
-  used.  Default is \code{options()$na.action}.}
+  \item{na.action}{All lines in data with any missing
+  values in the variables of formula are removed.}
 
   \item{reverse}{For right censored data, if reverse=TRUE
   then the censoring distribution is estimated.}
 
   \item{conf.int}{The level (between 0 and 1) for two-sided
-  pointwise confidence intervals. Defaults to 0.95.}
+  pointwise confidence intervals. Defaults to 0.95. Remark:
+  only plain Wald-type confidence limits are available.}
 
   \item{bandwidth}{Smoothing parameter for nearest
   neighborhoods based on the values of a continuous
@@ -155,6 +156,10 @@ plot(fit)
 summary(fit)
 quantile(fit)
 
+## Subset
+fit1a <- prodlim(Hist(time,status)~1,data=dat,subset=dat$X1==1)
+fit1b <- prodlim(Hist(time,status)~1,data=dat,subset=dat$X1==1 & dat$X2>0)
+
 ## --------------------clustered data---------------------
 library(survival)
 cdat <- cbind(SimSurv(30),patnr=sample(1:5,size=30,replace=TRUE))
@@ -237,6 +242,7 @@ dat <- data.frame(entry=c(7,3,11,12,11,2,1,7,15,17,3),time=10:20,status=c(1,0,2,
 fitd <- prodlim(Hist(time=time,event=status,entry=entry)~1,data=dat)
 summary(fitd)
 plot(fitd)
+#'
 }
 \author{
 Thomas A. Gerds \email{tag@biostat.ku.dk}
@@ -267,7 +273,6 @@ observations
 \code{\link{predictCuminc}}, \code{\link{Hist}},
 \code{\link{neighborhood}}, \code{\link{Surv}},
 \code{\link{survfit}}, \code{\link{strata}},
-\code{\link{cluster}}, \code{\link{NN}}
 }
 \keyword{cluster}
 \keyword{nonparametric}

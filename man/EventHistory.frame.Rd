@@ -3,8 +3,9 @@
 \title{Event history frame}
 \usage{
 EventHistory.frame(formula, data, unspecialsDesign = TRUE, specials,
-  specialsFactor = TRUE, specialsDesign = FALSE, stripSpecialNames = TRUE,
-  subset = NULL, na.action = options()$na.action)
+  specialsFactor = TRUE, specialsDesign = FALSE, stripSpecials = NULL,
+  stripArguments = NULL, stripAlias = NULL, stripUnspecials = NULL,
+  dropIntercept = TRUE, check.formula = TRUE, response = TRUE)
 }
 \arguments{
   \item{formula}{Formula whose left hand side specifies the
@@ -27,13 +28,26 @@ EventHistory.frame(formula, data, unspecialsDesign = TRUE, specials,
   \item{specialsDesign}{Passed as is to
   \code{\link{model.design}}}
 
-  \item{stripSpecialNames}{Passed as is to
+  \item{stripSpecials}{Passed as \code{specials} to
+  \code{\link{strip.terms}}}
+
+  \item{stripArguments}{Passed as \code{arguments} to
+  \code{\link{strip.terms}}}
+
+  \item{stripAlias}{Passed as \code{alias.names} to
+  \code{\link{strip.terms}}}
+
+  \item{stripUnspecials}{Passed as \code{unspecials} to
+  \code{\link{strip.terms}}}
+
+  \item{dropIntercept}{Passed as is to
   \code{\link{model.design}}}
 
-  \item{subset}{Passed as is to \code{\link{model.frame}}}
+  \item{check.formula}{If TRUE check if formula is a Surv
+  or Hist thing.}
 
-  \item{na.action}{Passed as is to
-  \code{\link{model.frame}} na.action.}
+  \item{response}{If FALSE do not get response data
+  (event.history).}
 }
 \value{
 A list which contains - the event.history (see
@@ -64,13 +78,11 @@ dsurv <- data.frame(time=1:7,
                     X4=c(44.69,37.41,68.54,38.85,35.9,27.02,41.84),
                     X1=factor(c("a","b","a","c","c","a","b"),
                         levels=c("c","a","b")))
-## define special functions prop and cluster
-prop <- function(x)x
-cluster <- function(x)x
 ## We pass a formula and the data
 e <- EventHistory.frame(Hist(time,status)~prop(X1)+X2+cluster(X3)+X4,
                         data=dsurv,
-                        specials=c("prop","cluster"))
+                        specials=c("prop","cluster"),
+                        stripSpecials=c("prop","cluster"))
 names(e)
 ## The first element is the event.history which is result of the left hand
 ## side of the formula:
@@ -91,32 +103,37 @@ e$prop
 e2 <- EventHistory.frame(Hist(time,status)~prop(X1)+X2+cluster(X3)+X4,
                          data=dsurv,
                          specials=c("prop","cluster"),
+                         stripSpecials=c("prop","cluster"),
                          specialsDesign=TRUE)
 e2$prop
 ## and the non-special covariates can be returned as a data.frame
 e3 <- EventHistory.frame(Hist(time,status)~prop(X1)+X2+cluster(X3)+X4,
                          data=dsurv,
                          specials=c("prop","cluster"),
+                         stripSpecials=c("prop","cluster"),
                          specialsDesign=TRUE,
                          unspecialsDesign=FALSE)
 e3$design
 
-## the idea is that the function is used to parse the combination of
+## the general idea is that the function is used to parse the combination of
 ## formula and data inside another function. Here is an example with
 ## competing risks
 SampleRegression <- function(formula,data=parent.frame()){
     thecall <- match.call()
-    ehf <- EventHistory.frame(formula=formula,data=data,specials=c("prop","timevar"))
+    ehf <- EventHistory.frame(formula=formula,
+                              data=data,
+                              stripSpecials=c("prop","cluster","timevar"),
+                              specials=c("prop","timevar","cluster"))
     time <- ehf$event.history[,"time"]
     status <- ehf$event.history[,"status"]
     ## event as a factor
     if (attr(ehf$event.history,"model")=="competing.risks"){
         event <- ehf$event.history[,"event"]
         Event <- getEvent(ehf$event.history)
-        data.frame(time,status,event,Event)
+        list(response=data.frame(time,status,event,Event),X=ehf[-1])
     }
     else{ # no competing risks
-        data.frame(time,status)
+        list(response=data.frame(time,status),X=ehf[-1])
     }
 }
 dsurv$outcome <- c("cause1","0","cause2","cause1","cause2","cause2","0")
@@ -127,6 +144,33 @@ form1 <- Hist(time,outcome!="0")~prop(X1)+X2+cluster(X3)+X4
 form2 <- Hist(time,outcome)~prop(X1)+cluster(X3)+X4
 ff <- list(form1,form2)
 lapply(ff,function(f){SampleRegression(f,dsurv)})
+
+
+## here is what the riskRegression package uses to
+## distinguish between covariates with
+## time-proportional effects and covariates with
+## time-varying effects:
+\dontrun{
+library(riskRegression)
+data(Melanoma)
+f <- Hist(time,status)~prop(thick)+strata(sex)+age+prop(ulcer,power=1)+timevar(invasion,test=1)
+## here the unspecial terms, i.e., the term age is treated as prop
+## also, strata is an alias for timvar
+
+EHF <- prodlim::EventHistory.frame(formula,
+                                   Melanoma[1:10],
+                                   specials=c("timevar","strata","prop","const","tp"),
+                                   stripSpecials=c("timevar","prop"),
+                                   stripArguments=list("prop"=list("power"=0),
+                                       "timevar"=list("test"=0)),
+                                   stripAlias=list("timevar"=c("strata"),
+                                       "prop"=c("tp","const")),
+                                   stripUnspecials="prop",
+                                   specialsDesign=TRUE,
+                                   dropIntercept=TRUE)
+EHF$prop
+EHF$timevar
+}
 }
 \author{
 Thomas A. Gerds <tag@biostat.ku.dk>
