@@ -18,59 +18,68 @@
 #' arguments can be found in the help pages of the corresponding functions.
 #' 
 #' @aliases plot.prodlim lines.prodlim
-#' @param x an object of class `prodlim' as returned by the \code{prodlim}
-#' function.
-#' @param type controls what part of the object is plotted.  Defaults to
-#' \code{"survival"} for the Kaplan-Meier estimate of the survival function in
-#' two state models and to \code{"incidence"} for the Aalen-Johansen estimate
-#' of the cumulative incidence function in competing risk models
-#' @param cause determines the cause of the cumulative incidence function.
-#' Currently one cause is allowed at a time, but you may call the function
-#' again with add=TRUE to add the lines of the other causes.
-#' @param newdata a data frame containing strata for which plotted curves are
-#' desired.
+#' @param x an object of class `prodlim' as returned by the
+#' \code{prodlim} function.
+#' @param type controls what part of the object is plotted.  Defaults
+#' to \code{"survival"} for the Kaplan-Meier estimate of the survival
+#' function in two state models and to \code{"incidence"} for the
+#' Aalen-Johansen estimate of the cumulative incidence function in
+#' competing risk models
+#' @param cause determines the cause of the cumulative incidence
+#' function.  Currently one cause is allowed at a time, but you may
+#' call the function again with add=TRUE to add the lines of the other
+#' causes.
+#' @param newdata a data frame containing strata for which plotted
+#' curves are desired. When omitted element \code{X} of object \code{x} is used.
 #' @param add if 'TRUE' curves are added to an existing plot.
 #' @param col color for curves defaults to 1:number(curves)
 #' @param lty line type for curves defaults to 1
 #' @param lwd line width for all curves
 #' @param ylim limits of the y-axis
 #' @param xlim limits of the x-axis
-#' @param ylab label for the y-axis
 #' @param xlab label for the x-axis
-#' @param legend if TRUE a legend is plotted by calling the function legend.
-#' Optional arguments of the function \code{legend} can be given in the form
-#' \code{legend.x=val} where x is the name of the argument and val the desired
-#' value. See also Details.
-#' @param logrank If TRUE, the logrank p-value will be extracted from a call to
-#' \code{survdiff} and added to the legend. This works only for survival
-#' models, i.e. Kaplan-Meier with discrete predictors.
-#' @param marktime if TRUE the curves are tick-marked at right censoring times
-#' by invoking the function \code{markTime}. Optional arguments of the function
-#' \code{markTime} can be given in the form \code{confint.x=val} as with
-#' legend. See also Details.
-#' @param confint if TRUE pointwise confidence intervals are plotted by
-#' invoking the function \code{confInt}. Optional arguments of the function
-#' \code{confInt} can be given in the form \code{confint.x=val} as with legend.
-#' See also Details.
-#' @param automar If TRUE the function trys to get good values for figure
-#' margins around the main plotting region.
-#' @param atrisk if TRUE display numbers of subjects at risk by invoking the
-#' function \code{atRisk}. Optional arguments of the function \code{atRisk} can
-#' be given in the form \code{atrisk.x=val} as with legend. See also Details.
+#' @param ylab label for the y-axis
+#' @param legend if TRUE a legend is plotted by calling the function
+#' legend.  Optional arguments of the function \code{legend} can be
+#' given in the form \code{legend.x=val} where x is the name of the
+#' argument and val the desired value. See also Details.
+#' @param logrank If TRUE, the logrank p-value will be extracted from
+#' a call to \code{survdiff} and added to the legend. This works only
+#' for survival models, i.e. Kaplan-Meier with discrete predictors.
+#' @param marktime if TRUE the curves are tick-marked at right
+#' censoring times by invoking the function \code{markTime}. Optional
+#' arguments of the function \code{markTime} can be given in the form
+#' \code{confint.x=val} as with legend. See also Details.
+#' @param confint if TRUE pointwise confidence intervals are plotted
+#' by invoking the function \code{confInt}. Optional arguments of the
+#' function \code{confInt} can be given in the form
+#' \code{confint.x=val} as with legend.  See also Details.
+#' @param automar If TRUE the function trys to find suitable values for
+#' the figure margins around the main plotting region.
+#' @param atrisk if TRUE display numbers of subjects at risk by
+#' invoking the function \code{atRisk}. Optional arguments of the
+#' function \code{atRisk} can be given in the form \code{atrisk.x=val}
+#' as with legend. See also Details.
 #' @param timeOrigin Start of the time axis
 #' @param axes If true axes are drawn. See details.
-#' @param background If \code{TRUE} the background color and grid color can be
-#' controlled using smart arguments SmartControl, such as
-#' background.bg="yellow" or background.bg=c("gray66","gray88").  The following
-#' defaults are passed to \code{background} by \code{plot.prodlim}:
-#' horizontal=seq(0,1,.25), vertical=NULL, bg="gray77", fg="white".  See
-#' \code{background} for all arguments, and the examples below.
+#' @param background If \code{TRUE} the background color and grid
+#' color can be controlled using smart arguments SmartControl, such as
+#' background.bg="yellow" or background.bg=c("gray66","gray88").  The
+#' following defaults are passed to \code{background} by
+#' \code{plot.prodlim}: horizontal=seq(0,1,.25), vertical=NULL,
+#' bg="gray77", fg="white".  See \code{background} for all arguments,
+#' and the examples below.
 #' @param percent If true the y-axis is labeled in percent.
-#' @param minAtrisk Integer. Show the curve only until the number at-risk is at
-#' least \code{minAtrisk}
-#' @param \dots Parameters that are filtered by \code{\link{SmartControl}} and
-#' then passed to the functions \code{\link{plot}}, \code{\link{legend}},
-#' \code{\link{axis}}, \code{\link{atRisk}}, \code{\link{confInt}},
+#' @param minAtrisk Integer. Show the curve only until the number
+#' at-risk is at least \code{minAtrisk}
+#' @param limit  When newdata is not specified and the number of lines
+#' in element \code{X} of object \code{x} exceeds limits, only the results for
+#' covariate constellations of the first, the middle and the last row in \code{X}
+#' are shown. Otherwise all lines of \code{X} are shown.
+#' @param ...  Parameters that are filtered by
+#' \code{\link{SmartControl}} and then passed to the functions
+#' \code{\link{plot}}, \code{\link{legend}}, \code{\link{axis}},
+#' \code{\link{atRisk}}, \code{\link{confInt}},
 #' \code{\link{markTime}}, \code{\link{backGround}}
 #' @return The (invisible) object.
 #' @note Similar functionality is provided by the function
@@ -92,69 +101,71 @@
 ##' plot(kmfit)
 ##' 
 ##' # change time range
-##' plot(kmfit,xlim=c(0,100))
+##' plot(kmfit,xlim=c(0,4))
 ##' 
 ##' # change scale of y-axis
 ##' plot(kmfit,percent=FALSE)
 ##' 
 ##' # change axis label and position of ticks
 ##' plot(kmfit,
-##'      xlim=c(0,100),
-##'      axis1.at=seq(0,100,30.25),
-##'      axis1.labels=0:(length(seq(0,100,30.25))-1),
-##'      xlab="Months",
+##'      xlim=c(0,10),
+##'      axis1.at=seq(0,10,1),
+##'      axis1.labels=0:10,
+##'      xlab="Years",
 ##'      axis2.las=2,
-##'      atrisk.at=seq(0,100,30.25),
-##'      atrisk.title="Patients")
+##'      atrisk.at=seq(0,10,2.5),
+##'      atrisk.title="")
 ##' 
 ##' # change background color
 ##' plot(kmfit,
-##'      xlim=c(0,100),
+##'      xlim=c(0,10),
 ##'      confint.citype="shadow",
 ##'      col=1,
-##'      axis1.at=seq(0,100,30.25),
-##'      axis1.labels=0:(length(seq(0,100,30.25))-1),
-##'      xlab="Months",
+##'      axis1.at=0:10,
+##'      axis1.labels=0:10,
+##'      xlab="Years",
 ##'      axis2.las=2,
-##'      atrisk.at=seq(0,100,30.25),
-##'      atrisk.title="Patients",
+##'      atrisk.at=seq(0,10,2.5),
+##'      atrisk.title="",
 ##'      background=TRUE,
 ##'      background.fg="white",
 ##'      background.horizontal=seq(0,1,.25/2),
-##'      background.vertical=seq(0,100,30.25),
+##'      background.vertical=seq(0,10,2.5),
 ##'      background.bg=c("gray88"))
 ##' 
 ##' # change type of confidence limits
 ##' plot(kmfit,
-##'      xlim=c(0,100),
+##'      xlim=c(0,10),
 ##'      confint.citype="dots",
 ##'      col=4,
 ##'      background=TRUE,
 ##'      background.bg=c("white","gray88"),
 ##'      background.fg="gray77",
 ##'      background.horizontal=seq(0,1,.25/2),
-##'      background.vertical=seq(0,100,30.25))
+##'      background.vertical=seq(0,10,2))
 ##' 
 ##' 
 ##' ### Kaplan-Meier in discrete strata
 ##' kmfitX <- prodlim(Hist(time, status) ~ X1, data = dat)
 ##' plot(kmfitX)
 ##' # move legend
-##' plot(kmfitX,legend.x="bottomleft",atRisk.cex=1.3)
+##' plot(kmfitX,legend.x="bottomleft",atRisk.cex=1.3,
+##'      atrisk.title="No. subjects")
 ##' 
 ##' ## Control the order of strata
-##' ## unfortunately prodlim does not obey the order of
+##' ## since version 1.5.1 prodlim does  obey the order of
 ##' ## factor levels
-##' dat$group <- factor(cut(dat$X2,c(-Inf,0,0.5,Inf)),labels=c("Low","Intermediate","High"))
+##' dat$group <- factor(cut(dat$X2,c(-Inf,0,0.5,Inf)),
+##'                     labels=c("High","Intermediate","Low"))
 ##' kmfitG <- prodlim(Hist(time, status) ~ group, data = dat)
 ##' plot(kmfitG)
 ##' 
-##' ## we want to re-order the labels such
-##' ## that in the legend and in the numbers at-risk
-##' ## "Low" comes before "Intermediate" before "High"
-##' dat$group2 <- as.numeric(dat$group)
+##' ## relevel 
+##' dat$group2 <- factor(cut(dat$X2,c(-Inf,0,0.5,Inf)),
+##'                      levels=c("(0.5, Inf]","(0,0.5]","(-Inf,0]"),
+##'                      labels=c("Low","Intermediate","High"))
 ##' kmfitG2 <- prodlim(Hist(time, status) ~ group2, data = dat)
-##' plot(kmfitG2,legend.legend=levels(dat$group),atrisk.labels=levels(dat$group))
+##' plot(kmfitG2)
 ##' 
 ##' # add log-rank test to legend
 ##' plot(kmfitX,
@@ -166,22 +177,28 @@
 ##' # change atrisk labels
 ##' plot(kmfitX,
 ##'      legend.x="bottomleft",
-##'      atRisk.cex=1.3,
 ##'      atrisk.title="Patients",
+##'      atrisk.cex=0.9,
 ##'      atrisk.labels=c("X1=0","X1=1"))
 ##' 
 ##' ### Kaplan-Meier in continuous strata
 ##' kmfitX2 <- prodlim(Hist(time, status) ~ X2, data = dat)
-##' plot(kmfitX2,xlim=c(0,50))
+##' plot(kmfitX2,xlim=c(0,10))
 ##' 
 ##' # specify values of X2 for which to show the curves 
-##' plot(kmfitX2,xlim=c(0,50),newdata=data.frame(X2=c(-1.8,0,1.2)))
+##' plot(kmfitX2,xlim=c(0,10),newdata=data.frame(X2=c(-1.8,0,1.2)))
 ##' 
 ##' ### Cluster-correlated data
 ##' library(survival)
 ##' cdat <- cbind(SimSurv(20),patnr=sample(1:5,size=20,replace=TRUE))
 ##' kmfitC <- prodlim(Hist(time, status) ~ cluster(patnr), data = cdat)
+##' plot(kmfitC)
 ##' plot(kmfitC,atrisk.labels=c("Units","Patients"))
+##' 
+##' kmfitC2 <- prodlim(Hist(time, status) ~ X1+cluster(patnr), data = cdat)
+##' plot(kmfitC2)
+##' plot(kmfitC2,atrisk.labels=c("Teeth","Patients","Teeth","Patients"),
+##'      atrisk.col=c(1,1,2,2))
 ##' 
 ##' ## simulate right censored data from a competing risk model 
 ##' datCR <- SimCompRisk(100)
@@ -203,6 +220,9 @@
 ##' plot(ajfit,cause="stacked")
 ##' 
 ##' ### conditional Aalen-Johansen estimator
+##' ajfitX1 <- prodlim(Hist(time, event) ~ X1, data = datCR)
+##' plot(ajfitX1)
+##' 
 ##' ajfitX <- prodlim(Hist(time, event) ~ X1+X2, data = datCR)
 ##' plot(ajfitX,newdata=data.frame(X1=c(1,1,0),X2=c(4,10,10)))
 ##' plot(ajfitX,newdata=data.frame(X1=c(1,1,0),X2=c(4,10,10)),cause=2)
@@ -215,6 +235,7 @@
 ##'      legend.title="X1=0,X2=0.1",
 ##'      legend.legend=paste("cause:",getStates(ajfitX$model.response)),
 ##'      plot.main="Subject specific stacked plot")
+##' 
 #' @method plot prodlim
 #' @S3method plot prodlim
 plot.prodlim <- function(x,
@@ -240,6 +261,7 @@ plot.prodlim <- function(x,
                          background=TRUE,
                          percent=TRUE,
                          minAtrisk=0,
+                         limit=10,
                          ...){
 
   # }}}
@@ -287,8 +309,14 @@ plot.prodlim <- function(x,
       criticalTime <- min(x$time[nRisk<=minAtrisk])
       plot.times <- plot.times[plot.times<criticalTime]
   }
-  if (missing(newdata)) newdata <- x$X
-  if (NROW(newdata)>10) newdata <- newdata[c(1,round(median(1:NROW(newdata))),NROW(newdata)),,drop=FALSE]
+  if (missing(newdata)) {
+      newdata <- x$X
+      if (NROW(newdata)>limit)
+          newdata <- newdata[c(1,round(median(1:NROW(newdata))),NROW(newdata)),,drop=FALSE]          
+  }
+  ## if (missing(newdata) && NROW(newdata)>limit)
+  ## newdata <- newdata[c(1,round(median(1:NROW(newdata))),NROW(newdata)),,drop=FALSE]
+  ## browser()
   stacked <- cause=="stacked"
   if (stacked){
       confint <- FALSE
@@ -330,7 +358,7 @@ plot.prodlim <- function(x,
       Y <- lapply(sumX,function(x)x[,type])
       nlines <- length(Y)
   }
-
+  
   # }}}
   # {{{  getting default arguments for plot, atrisk, axes, legend, confint, marktime
   
@@ -356,11 +384,36 @@ plot.prodlim <- function(x,
   lines.DefaultArgs <- list(type="s")
   plot.DefaultArgs <- list(x=0,y=0,type = "n",ylim = ylim,xlim = xlim,xlab = xlab,ylab = ylab)
   marktime.DefaultArgs <- list(x=Y,nlost=lapply(sumX,function(x)x[,"n.lost"]),times=plot.times,pch="I",col=col)
+  if (length(Y)==1 && length(x$clustervar)==0){
+      atriskDefaultLabels <- "Subjects: "
+      atriskDefaultTitle <- ""
+  }
+  else{
+      if (length(x$clustervar)>0){
+          atriskDefaultLabels <- rep(paste(c("Subjects","Clusters"),": ",sep=""),
+                                     nlines)
+      }
+      else{
+          ## print(names(Y))
+          if (model=="competing.risks" && stacked==TRUE){
+              atriskDefaultLabels <- "Subjects: "
+          }
+          else{
+              atriskDefaultLabels <- paste(gsub("[ \t]*$","",names(Y)),": ",sep="")
+          }
+      }
+      ## atriskDefaultLabels <- format(atriskDefaultLabels,justify="left")
+      atriskDefaultTitle <- ""
+  }
   atrisk.DefaultArgs <- list(x=x,
                              newdata=newdata,
                              interspace=1,
                              dist=.3,
                              col=col,
+                             labelcol=1,
+                             titlecol=1,
+                             title=atriskDefaultTitle,
+                             labels=atriskDefaultLabels,
                              times=seq(0,min(x$maxtime,xlim[2]),min(x$maxtime,xlim[2])/10))
   legend.DefaultArgs <- list(legend=names(Y),
                              lwd=lwd,
@@ -392,17 +445,21 @@ plot.prodlim <- function(x,
 # {{{  backward compatibility
 
   if (match("legend.args",names(allArgs),nomatch=FALSE)){
-    legend.DefaultArgs <- c(args[[match("legend.args",names(allArgs),nomatch=FALSE)]],legend.DefaultArgs)
-    legend.DefaultArgs <- legend.DefaultArgs[!duplicated(names(legend.DefaultArgs))]
+      legend.DefaultArgs <- c(args[[match("legend.args",names(allArgs),nomatch=FALSE)]],legend.DefaultArgs)
+      legend.DefaultArgs <- legend.DefaultArgs[!duplicated(names(legend.DefaultArgs))]
   }
   if (match("confint.args",names(allArgs),nomatch=FALSE)){
-    confint.DefaultArgs <- c(args[[match("confint.args",names(allArgs),nomatch=FALSE)]],confint.DefaultArgs)
-    confint.DefaultArgs <- confint.DefaultArgs[!duplicated(names(confint.DefaultArgs))]
+      confint.DefaultArgs <- c(args[[match("confint.args",names(allArgs),nomatch=FALSE)]],confint.DefaultArgs)
+      confint.DefaultArgs <- confint.DefaultArgs[!duplicated(names(confint.DefaultArgs))]
   }
   if (match("atrisk.args",names(allArgs),nomatch=FALSE)){
-    atrisk.DefaultArgs <- c(args[[match("atrisk.args",names(allArgs),nomatch=FALSE)]],atrisk.DefaultArgs)
-    atrisk.DefaultArgs <- atrisk.DefaultArgs[!duplicated(names(atrisk.DefaultArgs))]
+      atrisk.DefaultArgs <- c(args[[match("atrisk.args",names(allArgs),nomatch=FALSE)]],atrisk.DefaultArgs)
+      atrisk.DefaultArgs <- atrisk.DefaultArgs[!duplicated(names(atrisk.DefaultArgs))]
   }
+  if (length(list(...)) && match("legend.legend",names(list(...)),nomatch=FALSE) && any(sapply(newdata,is.factor))){
+      message("Since version 1.5.1 prodlim obeys the order of factor levels.\nThis may break old code which explicitly defines the legend labels.")
+  }
+  
   smartA <- SmartControl(call=  list(...),
                          keys=c("plot","lines","atrisk","legend","confint","background","marktime","axis1","axis2"),
                          ignore=c("x","type","cause","newdata","add","col","lty","lwd","ylim","xlim","xlab","ylab","legend","marktime","confint","automar","atrisk","timeOrigin","percent","axes","atrisk.args","confint.args","legend.args"),
@@ -412,8 +469,8 @@ plot.prodlim <- function(x,
                          replaceDefaults=FALSE,
                          verbose=TRUE)
 
-# }}}
-# {{{  setting margin parameters 
+  # }}}
+  # {{{  setting margin parameters 
 
   if (atrisk==TRUE){
       oldmar <- par()$mar
@@ -425,7 +482,13 @@ plot.prodlim <- function(x,
           ##                        + one extra line below the bottom number atrisk line
           ##      leftSideMargin =  margin line + atrisk.lab
           bottomMargin <- par()$mgp[2] + smartA$atrisk$dist+ ifelse(clusterp,2,1)*nlines + 1
-          newmar <- par()$mar + c(bottomMargin,0,0,0)
+          ## smartA$atrisk$labels
+          maxlabellen <- max(strwidth(c(smartA$atrisk$labels,smartA$atrisk$title),
+                                      cex=smartA$atrisk$cex,
+                                      units="inches"))
+          maxlabellen <- pmax(maxlabellen * (par("mar")[2] / par("mai")[2]),par("mar")[2])
+          leftMargin <- maxlabellen+2-par("mar")[2]
+          newmar <- par()$mar + c(bottomMargin,leftMargin,0,0)
           par(mar=newmar)
       }
   }
