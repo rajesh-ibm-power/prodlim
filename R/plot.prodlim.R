@@ -29,8 +29,10 @@
 #' function.  Currently one cause is allowed at a time, but you may
 #' call the function again with add=TRUE to add the lines of the other
 #' causes.
+#' @param select Select which lines to plot. This can be used when there are many strata or many competing risks to select a subset of the lines. However, a more clean way to select covariate stratat is to use newdata argument. With many competing risks, it is useful for the stacked plot to stack and show only a subset of the cumulative incidence functions. 
 #' @param newdata a data frame containing strata for which plotted
-#' curves are desired. When omitted element \code{X} of object \code{x} is used.
+#' curves are desired. When omitted element \code{X} of object
+#' \code{x} is used.
 #' @param add if 'TRUE' curves are added to an existing plot.
 #' @param col color for curves defaults to 1:number(curves)
 #' @param lty line type for curves defaults to 1
@@ -54,8 +56,8 @@
 #' by invoking the function \code{confInt}. Optional arguments of the
 #' function \code{confInt} can be given in the form
 #' \code{confint.x=val} as with legend.  See also Details.
-#' @param automar If TRUE the function trys to find suitable values for
-#' the figure margins around the main plotting region.
+#' @param automar If TRUE the function trys to find suitable values
+#' for the figure margins around the main plotting region.
 #' @param atrisk if TRUE display numbers of subjects at risk by
 #' invoking the function \code{atRisk}. Optional arguments of the
 #' function \code{atRisk} can be given in the form \code{atrisk.x=val}
@@ -72,11 +74,12 @@
 #' @param percent If true the y-axis is labeled in percent.
 #' @param minAtrisk Integer. Show the curve only until the number
 #' at-risk is at least \code{minAtrisk}
-#' @param limit  When newdata is not specified and the number of lines
-#' in element \code{X} of object \code{x} exceeds limits, only the results for
-#' covariate constellations of the first, the middle and the last row in \code{X}
-#' are shown. Otherwise all lines of \code{X} are shown.
-#' @param ...  Parameters that are filtered by
+#' @param limit When newdata is not specified and the number of lines
+#' in element \code{X} of object \code{x} exceeds limits, only the
+#' results for covariate constellations of the first, the middle and
+#' the last row in \code{X} are shown. Otherwise all lines of \code{X}
+#' are shown.
+#' @param ... Parameters that are filtered by
 #' \code{\link{SmartControl}} and then passed to the functions
 #' \code{\link{plot}}, \code{\link{legend}}, \code{\link{axis}},
 #' \code{\link{atRisk}}, \code{\link{confInt}},
@@ -105,6 +108,9 @@
 ##' 
 ##' # change scale of y-axis
 ##' plot(kmfit,percent=FALSE)
+##' 
+##' # mortality instead of survival
+##' plot(kmfit,type="cuminc")
 ##' 
 ##' # change axis label and position of ticks
 ##' plot(kmfit,
@@ -181,6 +187,11 @@
 ##'      atrisk.cex=0.9,
 ##'      atrisk.labels=c("X1=0","X1=1"))
 ##' 
+##' # multiple categorical factors
+##' 
+##' kmfitXG <- prodlim(Hist(time,status)~X1+group2,data=dat)
+##' plot(kmfitXG,select=1:2)
+##' 
 ##' ### Kaplan-Meier in continuous strata
 ##' kmfitX2 <- prodlim(Hist(time, status) ~ X2, data = dat)
 ##' plot(kmfitX2,xlim=c(0,10))
@@ -200,6 +211,18 @@
 ##' plot(kmfitC2,atrisk.labels=c("Teeth","Patients","Teeth","Patients"),
 ##'      atrisk.col=c(1,1,2,2))
 ##' 
+##' 
+##' ### Cluster-correlated data with strata
+##' n = 50
+##' foo = runif(n)
+##' bar = rexp(n)
+##' baz = rexp(n,1/2)
+##' d = stack(data.frame(foo,bar,baz))
+##' d$cl = sample(10, 3*n, replace=TRUE)
+##' fit = prodlim(Surv(values) ~ ind + cluster(cl), data=d)
+##' plot(fit)
+##' 
+##' 
 ##' ## simulate right censored data from a competing risk model 
 ##' datCR <- SimCompRisk(100)
 ##' with(datCR,plot(Hist(time,event)))
@@ -217,12 +240,21 @@
 ##' 
 ##' ### stacked plot
 ##' 
-##' plot(ajfit,cause="stacked")
+##' plot(ajfit,cause="stacked",select=2)
 ##' 
-##' ### conditional Aalen-Johansen estimator
+##' ### stratified Aalen-Johansen estimator
 ##' ajfitX1 <- prodlim(Hist(time, event) ~ X1, data = datCR)
 ##' plot(ajfitX1)
 ##' 
+##' ## add total number at-risk to a stratified curve
+##' ttt = 1:10
+##' plot(ajfitX1,atrisk.at=ttt,col=2:3)
+##' plot(ajfit,add=TRUE,col=1)
+##' atRisk(ajfit,newdata=datCR,col=1,times=ttt,line=3,labels="Total")
+##' 
+##'
+##' ## stratified Aalen-Johansen estimator in nearest neighborhoods
+##' ## of a continuous variable
 ##' ajfitX <- prodlim(Hist(time, event) ~ X1+X2, data = datCR)
 ##' plot(ajfitX,newdata=data.frame(X1=c(1,1,0),X2=c(4,10,10)))
 ##' plot(ajfitX,newdata=data.frame(X1=c(1,1,0),X2=c(4,10,10)),cause=2)
@@ -235,12 +267,12 @@
 ##'      legend.title="X1=0,X2=0.1",
 ##'      legend.legend=paste("cause:",getStates(ajfitX$model.response)),
 ##'      plot.main="Subject specific stacked plot")
-##' 
-#' @method plot prodlim
-#' @S3method plot prodlim
+##'  
+#' @export 
 plot.prodlim <- function(x,
                          type,
                          cause=1,
+                         select,
                          newdata,
                          add = FALSE,
                          col,
@@ -292,22 +324,22 @@ plot.prodlim <- function(x,
       stop("To plot the event-free survival curve, please fit a suitable model: prodlim(Hist(time,status!=0)~....")
   
   if (cens.type=="intervalCensored")
-    plot.times <- sort(unique(x$time[2,]))
+      plot.times <- sort(unique(x$time[2,]))
   else{
-    plot.times <- sort(unique(x$time))
-    if (plot.times[1]>timeOrigin) plot.times <- c(timeOrigin,plot.times)
+      plot.times <- sort(unique(x$time))
+      if (plot.times[1]>timeOrigin) plot.times <- c(timeOrigin,plot.times)
   }
   if (length(x$clustervar)>0)
-    nRisk <- x$n.risk[,1]
+      nRisk <- x$n.risk[,1]
   else
-    nRisk <- x$n.risk
+      nRisk <- x$n.risk
   if (minAtrisk>0 && any(nRisk<=minAtrisk)){
-
       if (all(nRisk<=minAtrisk)){
           return(plot(0,0,type="n",xlim=c(0, max(plot.times)),ylim=c(0, 1),axes=FALSE))
       }
       criticalTime <- min(x$time[nRisk<=minAtrisk])
       plot.times <- plot.times[plot.times<criticalTime]
+      ## if (sum(nEvent[nRisk>minAtrisk])<=1)
   }
   if (missing(newdata)) {
       newdata <- x$X
@@ -317,17 +349,17 @@ plot.prodlim <- function(x,
   ## if (missing(newdata) && NROW(newdata)>limit)
   ## newdata <- newdata[c(1,round(median(1:NROW(newdata))),NROW(newdata)),,drop=FALSE]
   ## browser()
-  stacked <- cause=="stacked"
+  stacked <- cause[1]=="stacked"
   if (stacked){
       confint <- FALSE
       if (model!="competing.risks") stop("Stacked plot works only for competing risks models.")
       if (NROW(newdata)>1) stop("Stacked plot works only for one covariate stratum.")
   }else{
-      if (length(cause)!=1){
-          warning("Currently only the cumulative incidence of a single cause can be plotted in one go. Use argument add=TRUE to add the lines of the other causes. For now I use the first cause")
-          cause <- cause[1]
-      }
-  }
+       if (length(cause)!=1){
+           warning("Currently only the cumulative incidence of a single cause can be plotted in one go. Use argument add=TRUE to add the lines of the other causes. For now I use the first cause")
+           cause <- cause[1]
+       }
+   }
   ## Y <- predict(x,times=plot.times,newdata=newdata,level.chaos=1,type=type,cause=cause,mode="list")
   startValue=ifelse(type=="surv",1,0)
   stats=list(c(type,startValue))
@@ -340,22 +372,49 @@ plot.prodlim <- function(x,
   if (x$cens.type=="intervalCensored"){
       stop("FIXME: There is no plot method implemented for intervalCensored data.")
   }
-  sumX <- lifeTab(x,
-                  times=plot.times,
-                  newdata=newdata,
-                  stats=stats,
-                  percent=FALSE)
-
-  if (model=="competing.risks" && stacked == FALSE) sumX <- sumX[[cause]]
-
+  if  (model=="competing.risks"){
+      if (stacked) ## all causes
+          cause <- attributes(x$model.response)$states
+      else
+          cause <- checkCauses(cause,x)
+      sumX <- lifeTab(x,
+                      times=plot.times,
+                      cause=cause,
+                      newdata=newdata,
+                      stats=stats,
+                      percent=FALSE)
+  }
+  else
+      sumX <- lifeTab(x,
+                      times=plot.times,
+                      newdata=newdata,
+                      stats=stats,
+                      percent=FALSE)
+  if (model=="competing.risks"){
+      if (stacked == FALSE){
+          sumX <- sumX[[cause]]
+      } else {
+            ## there is at most one stratum for each cause
+            if (!is.null(newdata))
+                sumX <- lapply(sumX,function(cc)cc[[1]])
+        }
+  }
   ## cover both no covariate and single newdata:
   if (!is.null(dim(sumX))) sumX <- list(sumX)
 
   if (model=="survival" && type=="cuminc"){
       Y <- lapply(sumX,function(x)1-x[,"surv"])
+      names(Y) <- names(sumX)
       nlines <- length(Y)
   } else{
       Y <- lapply(sumX,function(x)x[,type])
+      names(Y) <- names(sumX)
+      if (!missing(select)){
+          if (length(select)==1)
+              Y <- Y[select]
+          else
+              Y <- Y[select]
+      }
       nlines <- length(Y)
   }
   
@@ -375,12 +434,12 @@ plot.prodlim <- function(x,
   
   background.DefaultArgs <- list(xlim=xlim,
                                  ylim=ylim,
-                                 horizontal=seq(0,1,.25),
+                                 horizontal=seq(ylim[1],ylim[2],diff(ylim)/4),
                                  vertical=NULL,
                                  bg="white",
                                  fg="gray88")
   axis1.DefaultArgs <- list()
-  axis2.DefaultArgs <- list(at=seq(0,ylim[2],ylim[2]/4),side=2)
+  axis2.DefaultArgs <- list(at=seq(ylim[1],ylim[2],ylim[2]/4),side=2)
   lines.DefaultArgs <- list(type="s")
   plot.DefaultArgs <- list(x=0,y=0,type = "n",ylim = ylim,xlim = xlim,xlab = xlab,ylab = ylab)
   marktime.DefaultArgs <- list(x=Y,nlost=lapply(sumX,function(x)x[,"n.lost"]),times=plot.times,pch="I",col=col)
@@ -390,20 +449,30 @@ plot.prodlim <- function(x,
   }
   else{
       if (length(x$clustervar)>0){
+          atriskDefaultTitle <- ""
           atriskDefaultLabels <- rep(paste(c("Subjects","Clusters"),": ",sep=""),
                                      nlines)
       }
       else{
           ## print(names(Y))
           if (model=="competing.risks" && stacked==TRUE){
+              atriskDefaultTitle <- ""
               atriskDefaultLabels <- "Subjects: "
           }
           else{
-              atriskDefaultLabels <- paste(gsub("[ \t]*$","",names(Y)),": ",sep="")
+
+              if ((length(grep("=",names(Y)))==length(names(Y)))){
+                  atriskDefaultLabels <- paste(gsub("[ \t]*$","",sapply(strsplit(names(Y),"="),function(x)x[[2]])),
+                                               ": ", sep="")
+                  atriskDefaultTitle <- unique(sapply(strsplit(names(Y),"="),function(x)x[[1]]))
+              }else{
+                   atriskDefaultTitle <- ""
+                   atriskDefaultLabels <- paste(gsub("[ \t]*$","",names(Y)),": ",sep="")
+               }
           }
       }
       ## atriskDefaultLabels <- format(atriskDefaultLabels,justify="left")
-      atriskDefaultTitle <- ""
+      ## atriskDefaultTitle <- ""
   }
   atrisk.DefaultArgs <- list(x=x,
                              newdata=newdata,
@@ -415,6 +484,9 @@ plot.prodlim <- function(x,
                              title=atriskDefaultTitle,
                              labels=atriskDefaultLabels,
                              times=seq(0,min(x$maxtime,xlim[2]),min(x$maxtime,xlim[2])/10))
+  if (!missing(select) && (!(model=="competing.risks" && stacked))){
+      atrisk.DefaultArgs$newdata <- atrisk.DefaultArgs$newdata[select,,drop=FALSE]
+  }
   legend.DefaultArgs <- list(legend=names(Y),
                              lwd=lwd,
                              col=col,
@@ -470,8 +542,7 @@ plot.prodlim <- function(x,
                          verbose=TRUE)
 
   # }}}
-  # {{{  setting margin parameters 
-
+  # {{{  setting margin parameters
   if (atrisk==TRUE){
       oldmar <- par()$mar
       if (missing(automar) || automar==TRUE){
@@ -527,9 +598,13 @@ plot.prodlim <- function(x,
   # {{{  adding the lines 
   lines.type <- smartA$lines$type
   if (stacked==TRUE){
-      Y <- apply(do.call("rbind",Y),2,cumsum)
-      Y <- lapply(1:nlines,function(i)Y[i,])
-      names(Y) <- attr(x$model.response,"states")
+      if (length(Y)>1){
+          nY <- names(Y)
+          Y <- apply(do.call("rbind",Y),2,cumsum)
+          Y <- lapply(1:nlines,function(i)Y[i,])
+          names(Y) <- nY
+      }
+      ## names(Y) <- attr(x$model.response,"states")
       nix <- lapply(1:nlines, function(s) {
           yyy <- Y[[s]]
           ppp <- plot.times
@@ -600,7 +675,7 @@ plot.prodlim <- function(x,
       smartA$legend <- smartA$legend[-match("trimnames",names(smartA$legend))]
       save.xpd <- par()$xpd
       if (logrank && model=="survival" && length(smartA$legend$legend)>1){
-          formula.names <- try(all.names(formula),silent=TRUE)
+          ## formula.names <- try(all.names(formula),silent=TRUE)
           lrform <- x$call$formula
           if (lrform[[2]][[1]]==as.name("Hist"))
               lrform[[2]][[1]] <- as.name("Surv")

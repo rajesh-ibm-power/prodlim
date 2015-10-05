@@ -80,8 +80,7 @@
 #' ## and even transposed
 #' predict(mfit,times=c(-1,0,10,100,1000,10000),newdata=dat[18:21,],mode="matrix",bytime=TRUE)
 #' 
-#' @method predict prodlim
-#' @S3method predict prodlim
+#' @export 
 "predict.prodlim" <- function(object,
                               times,
                               newdata,
@@ -165,7 +164,7 @@
           X.formula <- drop.terms(terms(X.formula),find.clu)
       }
       if (!all(match(all.vars(X.formula),names(newdata),nomatch=FALSE)))
-          stop("Arg newdata does not contain all the covariates used for fitting. \n\nrequested: ", as.character(X.formula))
+          stop("Arg newdata does not contain all the covariates used for fitting. \n\nfitted variables: ", paste(all.vars(X.formula),collapse=", "),"\nnewdata contains:",ifelse(length(names(newdata))==0," nothing",names(newdata)))
       requested.X <- newdata[,all.vars(X.formula),drop=FALSE]
       NR <- NROW(requested.X)
       requested.names <- extract.name.from.special(names(requested.X))
@@ -181,8 +180,8 @@
           # --------------------------------------------------------------------
           ## changed 09 Dec 2014 (16:44) -->
           ## requested.strata <- do.call("paste",c(requested.X[,strata.vars,drop=FALSE],sep="\r"))
-          fit.strata <- interaction(fit.X[,strata.vars,drop=FALSE],sep=":")
-          requested.strata <- interaction(requested.X[,strata.vars,drop=FALSE],sep=":")
+          fit.strata <- interaction(fit.X[,strata.vars,drop=FALSE],sep=":",drop=TRUE)
+          requested.strata <- interaction(requested.X[,strata.vars,drop=FALSE],sep=":",drop=TRUE)
           fit.levels <- as.character(unique(fit.strata))
           ## <-- changed 09 Dec 2014 (16:44)          
           ## before version 1.5.1
@@ -252,7 +251,10 @@
       ##        order of names needs to
       ##        obey level.chaos
       names.strata <- apply(do.call("cbind",lapply(names(requested.X),function(n){
-          paste(n,format(requested.X[,n],digits=2),sep="=")})),1,paste,collapse=", ")
+                                                            if(is.numeric(requested.X[,n]))
+                                                                paste(n,format(requested.X[,n],digits=2),sep="=")
+                                                            else 
+                                                                paste(n,requested.X[,n],sep="=")})),1,paste,collapse=", ")
       if (level.chaos==0) {names.strata <- names.strata[new.order]}
       ##     print(names.strata)
       predictors <- predictors
@@ -307,36 +309,39 @@ predictSurv <- function(object,
                             mode="list",
                             cause,
                             ...){
-  #  if (object$model!="competing.risks") stop("This object is not a competing.risks model.")
-  p <- predict(object,newdata=newdata,level.chaos=level.chaos,times=times,type="list")
-  NT <- p$dimensions$time
-  NR <- p$dimensions$strata
-  pindex <- p$indices$time
-  if (object$model=="survival")
-    object$cuminc <- list("1"=1-object$surv)
-  if (missing(cause))
-    cause <- 1:NCOL(object$cuminc)
-  if (is.character(cause))
-    cause <- match(cause,names(object$cuminc))
-  stopifnot(is.numeric(cause) || any(cause>NROW(object$cuminc)))
-  out <- lapply(cause,function(thisCause){
-    if (NR == 1){
-      pcuminc <- c(0,object$cuminc[[thisCause]])[pindex+1]
-      if (mode=="matrix")
-        pcuminc <- matrix(pcuminc,nrow=1)
+    #  if (object$model!="competing.risks") stop("This object is not a competing.risks model.")
+    p <- predict(object,newdata=newdata,level.chaos=level.chaos,times=times,type="list")
+    NT <- p$dimensions$time
+    NR <- p$dimensions$strata
+    pindex <- p$indices$time
+    if (object$model=="survival"){
+        object$cuminc <- list("1"=1-object$surv)
+        cause <- 1
     }
+    if (object$model=="competing.risks"){
+        if (missing(cause))
+            cause <- attributes(object$model.response)$states
+        else
+            causes <- checkCauses(cause,object)
+    }
+    out <- lapply(cause,function(thisCause){
+                      if (NR == 1){
+                          pcuminc <- c(0,object$cuminc[[thisCause]])[pindex+1]
+                          if (mode=="matrix")
+                              pcuminc <- matrix(pcuminc,nrow=1)
+                      }
+                      else{
+                          pcuminc <- split(c(0,object$cuminc[[thisCause]])[pindex+1],
+                                           rep(1:NR,rep(NT,NR)))
+                          names(pcuminc) <- p$names.strata
+                          if (mode=="matrix" && NR>1) {
+                              pcuminc <- do.call("rbind",pcuminc)
+                          }
+                      }
+                      pcuminc})
+    if (length(cause)==1){
+        out[[1]]}
     else{
-      pcuminc <- split(c(0,object$cuminc[[thisCause]])[pindex+1],
-                       rep(1:NR,rep(NT,NR)))
-      names(pcuminc) <- p$names.strata
-      if (mode=="matrix" && NR>1) {
-        pcuminc <- do.call("rbind",pcuminc)
-      }
-    }
-    pcuminc})
-  if (length(cause)==1){
-    out[[1]]}
-  else{
-    names(out) <- names(object$cuminc)[cause]
-    out}
+        names(out) <- names(object$cuminc)[cause]
+        out}
 }

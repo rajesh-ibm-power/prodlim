@@ -212,10 +212,6 @@
 ##' summary(fitd)
 ##' plot(fitd)
 ##' #'
-#' @importFrom survival survdiff Surv cluster
-#' @importFrom stats quantile
-#' @import lava
-#' @useDynLib prodlim
 #' @export
 ## --> import From KernSmooth dpik
 "prodlim" <- function(formula,
@@ -244,7 +240,7 @@
                               data=data,
                               unspecialsDesign=FALSE,
                               specials=c("Strata","strata","factor", "NN","cluster"),
-                              stripSpecials=c("strata","cluster"),
+                              stripSpecials=c("strata","cluster","NN"),
                               stripAlias=list("strata"=c("Strata","factor")),
                               stripArguments=list("strata"=NULL,"NN"=NULL,"cluster"=NULL),
                               specialsDesign=FALSE,
@@ -327,7 +323,7 @@
     if (cotype %in% c(2,4)){
         ## changed 09 Dec 2014 (16:57)-->
         ## S <- do.call("paste", c(data.frame(strata), sep = "\r"))
-        S <- interaction(data.frame(strata), sep = ":")
+        S <- interaction(data.frame(strata), sep = ":",drop=TRUE)
         ## <-- changed 09 Dec 2014 (16:57) 
         NS <- length(unique(S))
         ## changed 09 Dec 2014 (16:57) -->
@@ -421,38 +417,38 @@
     discrete.predictors <- colnames(strata)
     X <- switch(cotype,
                 {#type=1
-                    NULL},
+    NULL},
                 { #type=2
-                    X <- data.frame(unique(strata[sorted,,drop=FALSE]))
-                    ## colnames(X) <- paste("strata",names(strata),sep=".")
-                    # colnames(X) <- names(strata)
-                    rownames(X) <- 1:NROW(X)
-                    X
-                },
+    X <- data.frame(unique(strata[sorted,,drop=FALSE]))
+    ## colnames(X) <- paste("strata",names(strata),sep=".")
+    # colnames(X) <- names(strata)
+    rownames(X) <- 1:NROW(X)
+    X
+},
                 { #type=3
-                    X <- unlist(lapply(nbh.list,function(x)x$values),use.names=FALSE)
-                    X <- data.frame(X)
-                    ## colnames(X) <- paste("NN",names(NN),sep=".")
-                    colnames(X) <- colnames(NN)
-                    rownames(X) <- 1:NROW(X)                
-                    X
-                },
+    X <- unlist(lapply(nbh.list,function(x)x$values),use.names=FALSE)
+    X <- data.frame(X)
+    ## colnames(X) <- paste("NN",names(NN),sep=".")
+    colnames(X) <- colnames(NN)
+    rownames(X) <- 1:NROW(X)                
+    X
+},
                 { #type=4
-                    D <- data.frame(unique(strata[sorted,,drop=FALSE]))
-                    ## colnames(D) <- paste("strata",names(strata),sep=".")
-                    D <- data.frame(D[rep(1:NS,n.unique.strata),,drop=FALSE])
-                    C <- data.frame(unlist(lapply(nbh.list,function(x)x$values),use.names=FALSE))
-                    X <- cbind(D,C)
-                    ## colnames(X) <- c(paste("strata",names(strata),sep="."),paste("NN",names(NN),sep="."))
-                    colnames(X) <- c(colnames(strata),colnames(NN))
-                    rownames(X) <- 1:NROW(X)                
-                    X
-                },
+    D <- data.frame(unique(strata[sorted,,drop=FALSE]))
+    ## colnames(D) <- paste("strata",names(strata),sep=".")
+    D <- data.frame(D[rep(1:NS,n.unique.strata),,drop=FALSE])
+    C <- data.frame(unlist(lapply(nbh.list,function(x)x$values),use.names=FALSE))
+    X <- cbind(D,C)
+    ## colnames(X) <- c(paste("strata",names(strata),sep="."),paste("NN",names(NN),sep="."))
+    colnames(X) <- c(colnames(strata),colnames(NN))
+    rownames(X) <- 1:NROW(X)                
+    X
+},
                 { #type=5
-                    X=data.frame(pseudo="pseudo")
-                    rownames(X) <- 1:NROW(X)                
-                    X
-                })
+    X=data.frame(pseudo="pseudo")
+    rownames(X) <- 1:NROW(X)                
+    X
+})
     if (x==TRUE)
         model.matrix <- switch(cotype,{NULL},strata,NN,cbind(strata,NN))[event.time.order,,drop=FALSE]
     else
@@ -491,7 +487,7 @@
             if (cotype==2){
                 NC <- unlist(tapply(cluster,Sfactor,function(x){length(unique(x))}))
                 cluster <- as.numeric(unlist(tapply(cluster,Sfactor,function(x){
-                    factor(x,labels=1:length(unique(x)))})))
+                                                                factor(x,labels=1:length(unique(x)))})))
             }
         }
     }
@@ -533,7 +529,12 @@
                     }
                 }
                 else{
-                    Cout <- prodlimIcensSurv(response,grid,tol=tol,maxiter=maxiter,ml=ifelse(method=="one.step",FALSE,TRUE),exact=exact)
+                    Cout <- prodlimIcensSurv(response,
+                                             grid,
+                                             tol=tol,
+                                             maxiter=maxiter,
+                                             ml=ifelse(method=="one.step",FALSE,TRUE),
+                                             exact=exact)
                 }
             }
             else{
@@ -604,7 +605,18 @@
                 names(out) <- names
                 out
             }
-            Cout <- list("time"=fit$time[1:NT],"n.risk"=fit$nrisk[1:NT],"n.event"=gatherC(fit$nevent),"n.lost"=fit$ncens[1:NT],"cuminc"=gatherC(fit$cuminc),"var.cuminc"=gatherC(fit$var.hazard),"se.cuminc"=gatherC(sqrt(pmax(0,fit$var.hazard))),"surv"=fit$surv[1:NT],"cause.hazard"=gatherC(fit$cause.hazard),"first.strata"=fit$first.strata,"size.strata"=fit$ntimes.strata,"model"="competing.risks")
+            Cout <- list("time"=fit$time[1:NT],
+                         "n.risk"=fit$nrisk[1:NT],
+                         "n.event"=gatherC(fit$nevent),
+                         "n.lost"=fit$ncens[1:NT],
+                         "cuminc"=gatherC(fit$cuminc),
+                         "var.cuminc"=gatherC(fit$var.hazard),
+                         "se.cuminc"=gatherC(sqrt(pmax(0,fit$var.hazard))),
+                         "surv"=fit$surv[1:NT],
+                         "cause.hazard"=gatherC(fit$cause.hazard),
+                         "first.strata"=fit$first.strata,
+                         "size.strata"=fit$ntimes.strata,
+                         "model"="competing.risks")
             Cout$maxtime <- max(Cout$time)
         }
         else {
@@ -636,9 +648,9 @@
                 # variance for cuminc (Korn & Dorey (1992), Stat in Med, Vol 11, page 815)
                 zval <- qnorm(1- (1-conf.int)/2, 0,1)
                 lower <- lapply(1:NS, function(state){
-                    pmax(Cout$cuminc[[state]] - zval * Cout$se.cuminc[[state]],0)})
+                                    pmax(Cout$cuminc[[state]] - zval * Cout$se.cuminc[[state]],0)})
                 upper <- lapply(1:NS, function(state){
-                    pmin(Cout$cuminc[[state]] + zval * Cout$se.cuminc[[state]],1)})
+                                    pmin(Cout$cuminc[[state]] + zval * Cout$se.cuminc[[state]],1)})
                 names(lower) <- states
                 names(upper) <- states
                 Cout <- c(Cout,list(lower=lower,upper=upper))
