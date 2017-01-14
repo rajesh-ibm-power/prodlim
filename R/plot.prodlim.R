@@ -19,80 +19,94 @@
 #' 
 #' @aliases plot.prodlim lines.prodlim
 #' @param x an object of class `prodlim' as returned by the
-#' \code{prodlim} function.
-#' @param type Either \code{"surv"} or \code{"cuminc"} controls what part of the object is plotted. 
-# Defaults to \code{object$type}.  
+#'     \code{prodlim} function.
+#' @param type Either \code{"surv"} or \code{"cuminc"} controls what
+# part of the object is plotted.  Defaults to \code{object$type}.
 #' @param cause determines the cause of the cumulative incidence
 #' function.  Currently one cause is allowed at a time, but you may
 #' call the function again with add=TRUE to add the lines of the other
 #' causes.
-#' @param select Select which lines to plot. This can be used when there
-#' are many strata or many competing risks to select a subset of the lines.
-#' However, a more clean way to select covariate stratat is to use argument \code{newdata}.
-#' Another application is when there are many competing risks and it is desired (for the stacked plot)
-#'  to stack and show only a subset of the cumulative incidence functions. 
-#' @param newdata a data frame containing covariate strata for which to show 
-#' curves. When omitted element \code{X} of object
-#' \code{x} is used.
+#' @param select Select which lines to plot. This can be used when
+#'     there are many strata or many competing risks to select a
+#'     subset of the lines.  However, a more clean way to select
+#'     covariate stratat is to use argument \code{newdata}.  Another
+#'     application is when there are many competing risks and it is
+#'     desired (for the stacked plot) to stack and show only a subset
+#'     of the cumulative incidence functions.
+#' @param newdata a data frame containing covariate strata for which
+#'     to show curves. When omitted element \code{X} of object
+#'     \code{x} is used.
 #' @param add if \code{TRUE} curves are added to an existing plot.
 #' @param col color for curves. Default is \code{1:number(curves)}
 #' @param lty line type for curves. Default is 1.
 #' @param lwd line width for all curves. Default is 3.
 #' @param ylim limits of the y-axis
 #' @param xlim limits of the x-axis
-#' @param xlab label for the x-axis
 #' @param ylab label for the y-axis
+#' @param xlab label for the x-axis
+#' @param timeconverter The strings are allowed:
+#'  "days2years" (conversion factor: 1/365.25)
+#'  "months2years" (conversion factor: 1/12)
+#'  "days2months" (conversion factor 1/30.4368499)
+#'  "years2days" (conversion factor 365.25)
+#'  "years2months" (conversion factor 12)
+#'   "months2days" (conversion factor 30.4368499)
 #' @param legend if TRUE a legend is plotted by calling the function
-#' legend.  Optional arguments of the function \code{legend} can be
-#' given in the form \code{legend.x=val} where x is the name of the
-#' argument and val the desired value. See also Details.
+#'     legend.  Optional arguments of the function \code{legend} can
+#'     be given in the form \code{legend.x=val} where x is the name of
+#'     the argument and val the desired value. See also Details.
 #' @param logrank If TRUE, the logrank p-value will be extracted from
-#' a call to \code{survdiff} and added to the legend. This works only
-#' for survival models, i.e. Kaplan-Meier with discrete predictors.
+#'     a call to \code{survdiff} and added to the legend. This works
+#'     only for survival models, i.e. Kaplan-Meier with discrete
+#'     predictors.
 #' @param marktime if TRUE the curves are tick-marked at right
-#' censoring times by invoking the function \code{markTime}. Optional
-#' arguments of the function \code{markTime} can be given in the form
-#' \code{confint.x=val} as with legend. See also Details.
+#'     censoring times by invoking the function
+#'     \code{markTime}. Optional arguments of the function
+#'     \code{markTime} can be given in the form \code{confint.x=val}
+#'     as with legend. See also Details.
 #' @param confint if TRUE pointwise confidence intervals are plotted
-#' by invoking the function \code{confInt}. Optional arguments of the
-#' function \code{confInt} can be given in the form
-#' \code{confint.x=val} as with legend.  See also Details.
+#'     by invoking the function \code{confInt}. Optional arguments of
+#'     the function \code{confInt} can be given in the form
+#'     \code{confint.x=val} as with legend.  See also Details.
 #' @param automar If TRUE the function trys to find suitable values
-#' for the figure margins around the main plotting region.
+#'     for the figure margins around the main plotting region.
 #' @param atrisk if TRUE display numbers of subjects at risk by
-#' invoking the function \code{atRisk}. Optional arguments of the
-#' function \code{atRisk} can be given in the form \code{atrisk.x=val}
-#' as with legend. See also Details.
+#'     invoking the function \code{atRisk}. Optional arguments of the
+#'     function \code{atRisk} can be given in the form
+#'     \code{atrisk.x=val} as with legend. See also Details.
 #' @param timeOrigin Start of the time axis
 #' @param axes If true axes are drawn. See details.
 #' @param background If \code{TRUE} the background color and grid
-#' color can be controlled using smart arguments SmartControl, such as
-#' background.bg="yellow" or background.bg=c("gray66","gray88").  The
-#' following defaults are passed to \code{background} by
-#' \code{plot.prodlim}: horizontal=seq(0,1,.25), vertical=NULL,
-#' bg="gray77", fg="white".  See \code{background} for all arguments,
-#' and the examples below.
+#'     color can be controlled using smart arguments SmartControl,
+#'     such as background.bg="yellow" or
+#'     background.bg=c("gray66","gray88").  The following defaults are
+#'     passed to \code{background} by \code{plot.prodlim}:
+#'     horizontal=seq(0,1,.25), vertical=NULL, bg="gray77",
+#'     fg="white".  See \code{background} for all arguments, and the
+#'     examples below.
 #' @param percent If true the y-axis is labeled in percent.
 #' @param minAtrisk Integer. Show the curve only until the number
-#' at-risk is at least \code{minAtrisk}
+#'     at-risk is at least \code{minAtrisk}
 #' @param limit When newdata is not specified and the number of lines
-#' in element \code{X} of object \code{x} exceeds limits, only the
-#' results for covariate constellations of the first, the middle and
-#' the last row in \code{X} are shown. Otherwise all lines of \code{X}
-#' are shown.
+#'     in element \code{X} of object \code{x} exceeds limits, only the
+#'     results for covariate constellations of the first, the middle
+#'     and the last row in \code{X} are shown. Otherwise all lines of
+#'     \code{X} are shown.
 #' @param ... Parameters that are filtered by
-#' \code{\link{SmartControl}} and then passed to the functions
-#' \code{\link{plot}}, \code{\link{legend}}, \code{\link{axis}},
-#' \code{\link{atRisk}}, \code{\link{confInt}},
-#' \code{\link{markTime}}, \code{\link{backGround}}
+#'     \code{\link{SmartControl}} and then passed to the functions
+#'     \code{\link{plot}}, \code{\link{legend}}, \code{\link{axis}},
+#'     \code{\link{atRisk}}, \code{\link{confInt}},
+#'     \code{\link{markTime}}, \code{\link{backGround}}
 #' @return The (invisible) object.
 #' @note Similar functionality is provided by the function
-#' \code{\link{plot.survfit}} of the survival library
+#'     \code{\link{plot.survfit}} of the survival library
 #' @author Thomas Alexander Gerds <tag@@biostat.ku.dk>
-#' @seealso \code{\link{plot}}, \code{\link{legend}}, \code{\link{axis}},
-#' \code{\link{prodlim}},\code{\link{plot.Hist}},\code{\link{summary.prodlim}},
-#' \code{\link{neighborhood}}, \code{\link{atRisk}}, \code{\link{confInt}},
-#' \code{\link{markTime}}, \code{\link{backGround}}
+#' @seealso \code{\link{plot}}, \code{\link{legend}},
+#'     \code{\link{axis}},
+#'     \code{\link{prodlim}},\code{\link{plot.Hist}},\code{\link{summary.prodlim}},
+#'     \code{\link{neighborhood}}, \code{\link{atRisk}},
+#'     \code{\link{confInt}}, \code{\link{markTime}},
+#'     \code{\link{backGround}}
 #' @keywords survival
 ##' @examples
 ##' ## simulate right censored data from a two state model 
@@ -103,6 +117,8 @@
 ##' ### marginal Kaplan-Meier estimator
 ##' kmfit <- prodlim(Hist(time, status) ~ 1, data = dat)
 ##' plot(kmfit)
+##'
+##' plot(kmfit,timeconverter="years2months")
 ##' 
 ##' # change time range
 ##' plot(kmfit,xlim=c(0,4))
@@ -281,8 +297,9 @@ plot.prodlim <- function(x,
                          lwd,
                          ylim,
                          xlim,
-                         xlab="Time",
                          ylab,
+                         xlab="Time",
+                         timeconverter,
                          legend=TRUE,
                          logrank=FALSE,
                          marktime=FALSE,
@@ -295,7 +312,6 @@ plot.prodlim <- function(x,
                          percent=TRUE,
                          minAtrisk=0,
                          limit=10,
-                         ## time.scale="same",
                          ...){
 
     # }}}
@@ -353,7 +369,7 @@ plot.prodlim <- function(x,
   ## restrict plot.times to xlim
   if (!missing(xlim)){
       if (xlim[1]>plot.times[1]) plot.times <- plot.times[plot.times>=xlim[1]]
-      if (xlim[2]<plot.times[length(plot.times)]) plot.times <- plot.times[plot.times<=xlim[2]]
+      if (xlim[2]<plot.times[length(plot.times)]) plot.times <- unique(c(plot.times[plot.times<=xlim[2]],xlim[2]))
   }
   ## if (missing(newdata) && NROW(newdata)>limit)
   ## newdata <- newdata[c(1,round(median(1:NROW(newdata))),NROW(newdata)),,drop=FALSE]
@@ -430,89 +446,106 @@ plot.prodlim <- function(x,
         nlines <- length(Y)
     }
   
-  # }}}
-  # {{{  getting default arguments for plot, atrisk, axes, legend, confint, marktime
+    # }}}
+    # {{{  getting default arguments for plot, atrisk, axes, legend, confint, marktime
+    if (missing(xlim)) xlim <- c(min(plot.times), max(plot.times))
+    if (!missing(timeconverter)){
+        units <- strsplit(tolower(as.character(substitute(timeconverter))),"[ \t]?(2|to)[ \t]?")[[1]]
+        conversion <- switch(paste0(units,collapse="-"),
+                             "days-years"=1/365.25,
+                             "months-years"=1/12,
+                             "days-months"=1/30.4368499,
+                             "years-days"=365.25,
+                             "years-months"=12,
+                             "months-days"=30.4368499)
+        one <- switch(units[[1]],"years"=1,"months"=12,"days"=365.25)
+        xlab <- paste0("Time (", units[[2]],")")
+        axis1.DefaultArgs <- list(at=seq(xlim[1],xlim[2],one),labels=seq(xlim[1],xlim[2],one)*conversion)
+        atriskDefaultPosition <- seq(xlim[1],xlim[2],one)
+    } else {
+        if (missing(xlab)) xlab <- "Time"
+        axis1.DefaultArgs <- list()
+        atriskDefaultPosition <- seq(min(plot.times),max(plot.times),(max(plot.times)-min(plot.times))/10)
+    }
+    if (missing(ylab)) ylab <- switch(type,
+                                      "surv"=ifelse(x$reverse==TRUE,"Censoring probability","Survival probability"),
+                                      "cuminc"="Cumulative incidence",
+                                      "hazard"="Cumulative hazard")
+    if (missing(ylim)) ylim <- c(0, 1)
+    if (missing(lwd)) lwd <- rep(3,nlines)
+    if (missing(col)) col <- 1:nlines
+    if (missing(lty)) lty <- rep(1, nlines)
+    if (length(lwd) < nlines) lwd <- rep(lwd, nlines)
+    if (length(lty) < nlines) lty <- rep(lty, nlines)
+    if (length(col) < nlines) col <- rep(col, nlines)
   
-  if (missing(ylab)) ylab <- switch(type,"surv"=ifelse(x$reverse==TRUE,"Censoring probability","Survival probability"),"cuminc"="Cumulative incidence","hazard"="Cumulative hazard")
-  if (missing(xlab)) xlab <- "Time"
-  if (missing(xlim)) xlim <- c(min(plot.times), max(plot.times))
-  if (missing(ylim)) ylim <- c(0, 1)
-  if (missing(lwd)) lwd <- rep(3,nlines)
-  if (missing(col)) col <- 1:nlines
-  if (missing(lty)) lty <- rep(1, nlines)
-  if (length(lwd) < nlines) lwd <- rep(lwd, nlines)
-  if (length(lty) < nlines) lty <- rep(lty, nlines)
-  if (length(col) < nlines) col <- rep(col, nlines)
-  
-  background.DefaultArgs <- list(xlim=xlim,
-                                 ylim=ylim,
-                                 horizontal=seq(ylim[1],ylim[2],diff(ylim)/4),
-                                 vertical=NULL,
-                                 bg="white",
-                                 fg="gray88")
-  axis1.DefaultArgs <- list()
-  axis2.DefaultArgs <- list(at=seq(ylim[1],ylim[2],ylim[2]/4),side=2)
-  lines.DefaultArgs <- list(type="s")
-  plot.DefaultArgs <- list(x=0,y=0,type = "n",ylim = ylim,xlim = xlim,xlab = xlab,ylab = ylab)
-  marktime.DefaultArgs <- list(x=Y,nlost=lapply(sumX,function(x)x[,"n.lost"]),times=plot.times,pch="I",col=col)
-  if (length(Y)==1 && length(x$clustervar)==0){
-      atriskDefaultLabels <- "Subjects: "
-      atriskDefaultTitle <- ""
-  }
-  else{
-      if (length(x$clustervar)>0){
-          atriskDefaultTitle <- ""
-          atriskDefaultLabels <- rep(paste(c("Subjects","Clusters"),": ",sep=""),
-                                     nlines)
-      }
-      else{
-          ## print(names(Y))
-          if (model=="competing.risks" && stacked==TRUE){
-              atriskDefaultTitle <- ""
-              atriskDefaultLabels <- "Subjects: "
-          }
-          else{
+    background.DefaultArgs <- list(xlim=xlim,
+                                   ylim=ylim,
+                                   horizontal=seq(ylim[1],ylim[2],diff(ylim)/4),
+                                   vertical=NULL,
+                                   bg="white",
+                                   fg="gray88")
+    axis2.DefaultArgs <- list(at=seq(ylim[1],ylim[2],ylim[2]/4),side=2)
+    lines.DefaultArgs <- list(type="s")
+    plot.DefaultArgs <- list(x=0,y=0,type = "n",ylim = ylim,xlim = xlim,xlab = xlab,ylab = ylab)
+    marktime.DefaultArgs <- list(x=Y,nlost=lapply(sumX,function(x)x[,"n.lost"]),times=plot.times,pch="I",col=col)
+    if (length(Y)==1 && length(x$clustervar)==0){
+        atriskDefaultLabels <- "Subjects: "
+        atriskDefaultTitle <- ""
+    }
+    else{
+        if (length(x$clustervar)>0){
+            atriskDefaultTitle <- ""
+            atriskDefaultLabels <- rep(paste(c("Subjects","Clusters"),": ",sep=""),
+                                       nlines)
+        }
+        else{
+            ## print(names(Y))
+            if (model=="competing.risks" && stacked==TRUE){
+                atriskDefaultTitle <- ""
+                atriskDefaultLabels <- "Subjects: "
+            }
+            else{
 
-              if ((length(grep("=",names(Y)))==length(names(Y)))){
-                  atriskDefaultLabels <- paste(gsub("[ \t]*$","",sapply(strsplit(names(Y),"="),function(x)x[[2]])),
-                                               ": ", sep="")
-                  atriskDefaultTitle <- unique(sapply(strsplit(names(Y),"="),function(x)x[[1]]))
-              }else{
-                   atriskDefaultTitle <- ""
-                   atriskDefaultLabels <- paste(gsub("[ \t]*$","",names(Y)),": ",sep="")
-               }
-          }
-      }
-      ## atriskDefaultLabels <- format(atriskDefaultLabels,justify="left")
-      ## atriskDefaultTitle <- ""
-  }
-  atrisk.DefaultArgs <- list(x=x,
-                             newdata=newdata,
-                             interspace=1,
-                             dist=.3,
-                             col=col,
-                             labelcol=1,
-                             titlecol=1,
-                             title=atriskDefaultTitle,
-                             labels=atriskDefaultLabels,
-                             times=seq(min(plot.times),max(plot.times),(max(plot.times)-min(plot.times))/10))
-                             ## times=seq(0,min(x$maxtime,xlim[2]),min(x$maxtime,xlim[2])/10))
-  if (!missing(select) && (!(model=="competing.risks" && stacked))){
-      atrisk.DefaultArgs$newdata <- atrisk.DefaultArgs$newdata[select,,drop=FALSE]
-  }
-  legend.DefaultArgs <- list(legend=names(Y),
-                             lwd=lwd,
-                             col=col,
-                             lty=lty,
-                             cex=1.5,
-                             bty="n",
-                             y.intersp=1.3,
-                             trimnames=!match("legend.legend",names(allArgs),nomatch=0),
-                             x="topright")
-  if (stacked) {
-      legend.DefaultArgs$title <- "Competing risks"
-      legend.DefaultArgs$x <- "topleft"
-  }
+                if ((length(grep("=",names(Y)))==length(names(Y)))){
+                    atriskDefaultLabels <- paste(gsub("[ \t]*$","",sapply(strsplit(names(Y),"="),function(x)x[[2]])),
+                                                 ": ", sep="")
+                    atriskDefaultTitle <- unique(sapply(strsplit(names(Y),"="),function(x)x[[1]]))
+                }else{
+                     atriskDefaultTitle <- ""
+                     atriskDefaultLabels <- paste(gsub("[ \t]*$","",names(Y)),": ",sep="")
+                 }
+            }
+        }
+        ## atriskDefaultLabels <- format(atriskDefaultLabels,justify="left")
+        ## atriskDefaultTitle <- ""
+    }
+    atrisk.DefaultArgs <- list(x=x,
+                               newdata=newdata,
+                               interspace=1,
+                               dist=.3,
+                               col=col,
+                               labelcol=1,
+                               titlecol=1,
+                               title=atriskDefaultTitle,
+                               labels=atriskDefaultLabels,
+                               times=atriskDefaultPosition)
+    if (!missing(select) && (!(model=="competing.risks" && stacked))){
+        atrisk.DefaultArgs$newdata <- atrisk.DefaultArgs$newdata[select,,drop=FALSE]
+    }
+    legend.DefaultArgs <- list(legend=names(Y),
+                               lwd=lwd,
+                               col=col,
+                               lty=lty,
+                               cex=1.5,
+                               bty="n",
+                               y.intersp=1.3,
+                               trimnames=!match("legend.legend",names(allArgs),nomatch=0),
+                               x="topright")
+    if (stacked) {
+        legend.DefaultArgs$title <- "Competing risks"
+        legend.DefaultArgs$x <- "topleft"
+    }
 
   if (NCOL(newdata)>1) legend.DefaultArgs$trimnames <- FALSE
   confint.DefaultArgs <- list(x=x,

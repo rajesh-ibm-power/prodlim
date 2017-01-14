@@ -245,8 +245,12 @@
                       type){
     # {{{  find the data
     call <- match.call()
-    if (!missing(subset))
+    if (!missing(subset)){
         data <- subset(data,subset=subset)
+        if (!missing(caseweights)){
+            caseweights <- subset(caseweights,subset=subset)
+        }
+    }
     EHF <- EventHistory.frame(formula=formula,
                               data=data,
                               unspecialsDesign=FALSE,
@@ -261,8 +265,8 @@
     if (reverse==TRUE){ ## estimation of censoring distribution
         model.type <- 1
     }else{
-         model.type <- match(attr(event.history,"model"),c("survival","competing.risks","multi.states"))
-     }
+        model.type <- match(attr(event.history,"model"),c("survival","competing.risks","multi.states"))
+    }
     if (missing(type)) type <- switch(model.type,"survival"=ifelse(reverse,"cuminc","surv"),"cuminc")
     else {
         type <- tolower(type)
@@ -360,6 +364,27 @@
     response <- response[sorted,] # sort each stratum
   
     # }}}
+
+    # {{{ caseweights
+    if (missing(caseweights)) {
+        weighted <- 0
+        caseweights <- NULL
+    }
+    else {
+        weighted <- 1
+        if(length(caseweights)!=NROW(response))
+            stop(paste("The length of caseweights is: ",
+                       length(caseweights),
+                       "\nthis is not the same as the number of subjects\nwith no missing values, which is ",
+                       NROW(response),
+                       sep=""))
+        ## wrong to order by event.time.order when there are covariates
+        ## caseweights <- caseweights[event.time.order]
+        ## this fixes bug in versions < 1.5.7 
+        caseweights <- caseweights[sorted]
+    }
+    # }}}
+
     # {{{  overlapping neighborhoods (continuous covariates)
   
     if (cotype %in% c(3,4)){
@@ -378,6 +403,7 @@
                 nbh.list[[l]]$neighbors+tabS[l]}),use.names=FALSE) ## the size of the previous strata
         }
         response <- response[neighbors,,drop=FALSE]
+        if (weighted==TRUE) caseweights <- caseweights[neighbors]
     }
   
   # }}}
@@ -470,25 +496,6 @@
     else
         model.matrix <- NULL
     event.history <- event.history[event.time.order,,drop=FALSE]
-    # }}}
-    # {{{ caseweights
-    if (missing(caseweights)) {
-        weighted <- 0
-        caseweights <- NULL
-    }
-    else {
-        weighted <- 1
-        if(length(caseweights)!=NROW(response))
-            stop(paste("The length of caseweights is: ",
-                       length(caseweights),
-                       "\nthis is not the same as the number of subjects\nwith no missing values, which is ",
-                       NROW(response),
-                       sep=""))
-        ## wrong to order by event.time.order when there are covariates
-        ## caseweights <- caseweights[event.time.order]
-        ## this fixes bug in versions < 1.5.7 
-        caseweights <- caseweights[sorted]
-    }
     # }}}
     # {{{  cluster correlated data need an adjusted variance formula
     clustered <- (length(covariates$cluster)>0)
