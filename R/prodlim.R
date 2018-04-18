@@ -225,7 +225,6 @@
 ##' plot(fitd)
 ##' 
 #' @export
-##' @author Thomas A. Gerds <tag@@biostat.ku.dk>
 "prodlim" <- function(formula,
                       data = parent.frame(),
                       subset,
@@ -283,7 +282,7 @@
     }
     # }}}
     # {{{  covariates
-
+    
     covariates <- EHF[-1]
     ##  `factor' and 'Strata' are aliases for `strata'
     strata.pos <- match(c("strata","factor","Strata"),names(covariates),nomatch=0)
@@ -565,7 +564,37 @@
             }
             else{
                 ## right censored not clustered
-                fit <- .C("prodlimSRC",as.double(response[,"time"]),as.double(response[,"status"]),integer(0),as.double(entrytime),as.double(caseweights),integer(0),as.integer(N),integer(0),integer(0),as.integer(NU),as.integer(size.strata),time=double(N),nrisk=double(N),nevent=double(N),ncens=double(N),surv=double(N),double(0),hazard = double(N),var.hazard=double(N),extra.double=double(0),max.nc=integer(0),ntimes=integer(1),ntimes.strata=integer(NU),first.strata=integer(NU),as.integer(reverse),model=as.integer(0),independent=as.integer(1),delayed=as.integer(delayed),weighted=as.integer(weighted),PACKAGE="prodlim")
+                fit <- .C("prodlimSRC",
+                          as.double(response[,"time"]),
+                          as.double(response[,"status"]),
+                          integer(0),
+                          as.double(entrytime),
+                          as.double(caseweights),
+                          integer(0),
+                          as.integer(N),
+                          integer(0),
+                          integer(0),
+                          as.integer(NU),
+                          as.integer(size.strata),
+                          time=double(N),
+                          nrisk=double(N),
+                          nevent=double(N),
+                          ncens=double(N),
+                          surv=double(N),
+                          double(0),
+                          hazard = double(N),
+                          var.hazard=double(N),
+                          extra.double=double(0),
+                          max.nc=integer(0),
+                          ntimes=integer(1),
+                          ntimes.strata=integer(NU),
+                          first.strata=integer(NU),
+                          as.integer(reverse),
+                          model=as.integer(0),
+                          independent=as.integer(1),
+                          delayed=as.integer(delayed),
+                          weighted=as.integer(weighted),
+                          PACKAGE="prodlim")
                 NT <- fit$ntimes
                 Cout <- list("time"=fit$time[1:NT],
                              "n.risk"=fit$nrisk[1:NT],

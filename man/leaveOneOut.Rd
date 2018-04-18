@@ -2,8 +2,8 @@
 % Please edit documentation in R/leaveOneOut.R
 \name{leaveOneOut}
 \alias{leaveOneOut}
-\alias{leaveOneOut.competing.risks}
 \alias{leaveOneOut.survival}
+\alias{leaveOneOut.competing.risks}
 \title{Compute jackknife pseudo values.}
 \usage{
 leaveOneOut(object, times, cause, lag = FALSE, ...)
@@ -14,7 +14,8 @@ leaveOneOut(object, times, cause, lag = FALSE, ...)
 \item{times}{time points at which to compute leave-one-out
 event/survival probabilities.}
 
-\item{cause}{For competing risks the cause of interest.}
+\item{cause}{Character (other classes are converted with \code{as.character}).
+For competing risks the cause of interest.}
 
 \item{lag}{For survival models only. If \code{TRUE} lag the result, i.e. compute
 S(t-) instead of S(t).}
@@ -27,10 +28,9 @@ Compute leave-one-out estimates
 \details{
 This function is the work-horse for \code{jackknife}
 }
-\author{
-Thomas Alexander Gerds <tag@biostat.ku.dk>
-}
 \seealso{
 \code{\link{jackknife}}
 }
-
+\author{
+Thomas Alexander Gerds <tag@biostat.ku.dk>
+}

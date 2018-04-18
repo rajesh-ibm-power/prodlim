@@ -2,18 +2,18 @@
 % Please edit documentation in R/predict.prodlim.R
 \name{predict.prodlim}
 \alias{predict.prodlim}
-\alias{predictCuminc}
 \alias{predictSurv}
+\alias{predictCuminc}
 \title{Predicting event probabilities from product limit estimates}
 \usage{
 \method{predict}{prodlim}(object, times, newdata, level.chaos = 1,
   type = c("surv", "cuminc", "list"), mode = "list", bytime = FALSE,
-  cause = 1, ...)
+  cause, ...)
 }
 \arguments{
 \item{object}{A fitted object of class "prodlim".}
 
-\item{times}{Vector of times at which to return the estimated probabilities.}
+\item{times}{Vector of times at which to return the estimated probabilities (survival or absolute event risks).}
 
 \item{newdata}{A data frame with the same variable names as those that
 appear on the right hand side of the 'prodlim' formula.  If there are
@@ -42,8 +42,10 @@ predicted probabilities will have a column for each time and a row for each
 newdata. Only when \code{object$covariate.type>1} and more than one time is
 given.}
 
-\item{cause}{The cause for predicting the cause-specific cumulative
-incidence function in competing risk models.}
+\item{cause}{Character (other classes are converted with \code{as.character}).
+The cause for predicting the cause-specific cumulative
+incidence function in competing risk models, that is the absolute risk of 
+\code{cause} events between time zero and \code{times} .}
 
 \item{\dots}{Only for compatibility reasons.}
 }
@@ -84,12 +86,13 @@ dat <- SimSurv(400)
 fit <- prodlim(Hist(time,status)~1,data=dat)
 
 ## predict the survival probs at selected times 
-predict(fit,times=c(10,100,1000))
+predict(fit,times=c(3,5,10))
 
-## works also outside the usual range of the Kaplan-Meier
+## NA is returned when the time point is beyond the
+## range of definition of the Kaplan-Meier estimator:
 predict(fit,times=c(-1,0,10,100,1000,10000))
 
-## newdata is required if there are strata
+## when there are strata, newdata is required 
 ## or neighborhoods (i.e. overlapping strata)
 mfit <- prodlim(Hist(time,status)~X1+X2,data=dat)
 predict(mfit,times=c(-1,0,10,100,1000,10000),newdata=dat[18:21,])
@@ -101,11 +104,10 @@ predict(mfit,times=c(-1,0,10,100,1000,10000),newdata=dat[18:21,],mode="matrix")
 predict(mfit,times=c(-1,0,10,100,1000,10000),newdata=dat[18:21,],mode="matrix",bytime=TRUE)
 
 }
-\author{
-Thomas Alexander Gerds <tag@biostat.ku.dk>
-}
 \seealso{
 \code{\link{predictSurvIndividual}}
 }
+\author{
+Thomas Alexander Gerds <tag@biostat.ku.dk>
+}
 \keyword{survival}
-

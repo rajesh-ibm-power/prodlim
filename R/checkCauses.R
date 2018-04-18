@@ -1,34 +1,25 @@
-### checkCauses.R --- 
-#----------------------------------------------------------------------
-## author: Thomas Alexander Gerds
-## created: Sep 10 2015 (11:56) 
-## Version: 
-## last-updated: Sep 28 2015 (10:03) 
-##           By: Thomas Alexander Gerds
-##     Update #: 3
-#----------------------------------------------------------------------
-## 
-### Commentary: 
-## 
-### Change Log:
-#----------------------------------------------------------------------
-## 
-### Code:
+#' Check availability of a cause in competing risk settings
+#'
+#' For competing risk settings, check if the requested cause is known to the object
+#' @param cause cause of interest
+#' @param object object either obtained with \code{Hist} or \code{prodlim} 
+#' @export
 checkCauses <- function(cause,object){
-    cause <- unique(cause)
-    fitted.causes <- attributes(object$model.response)$states
-    ## stopifnot(length(fitted.causes)==length(object$n.event))
-    if (!is.numeric(cause)){
-        Found <- match(as.character(cause),fitted.causes,nomatch=0)
-        if (any(Found==0)) stop("Cannot find competing cause(s) ", as.character(cause)[Found==0], "in fitted object.")
-        return(cause)
-    }else{
-         if (length(fitted.causes)<max(cause))
-             stop(paste0("Object has fitted ",length(fitted.causes)," competing causes. So, there is no cause number: ",max(cause)))
-         return(fitted.causes[cause])
-     }
+    if (!is.null(cause)){
+        cause <- unique(cause)
+        if (!is.character(cause)) cause <- as.character(cause)
+        fitted.causes <- prodlim::getStates(object)
+        if (!is.null(fitted.causes)){
+            if (!(all(cause %in% fitted.causes))){
+                stop(paste0("Cannot find requested cause(s) in object.\n\n",
+                            "Requested cause(s): ",
+                            paste0(cause,collapse=", "),
+                            "\n Available causes: ",
+                            paste(fitted.causes,collapse=", "),"\n"))
+            }
+        }
+        cause
+    }
 }
-
-
 #----------------------------------------------------------------------
 ### checkCauses.R ends here

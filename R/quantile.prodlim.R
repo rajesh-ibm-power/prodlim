@@ -13,6 +13,12 @@
 #' library(lava)
 #' set.seed(1)
 #' d=SimSurv(30)
+#'
+#' # Quantiles of the potential followup time
+#' g=prodlim(Hist(time,status)~1,data=d,reverse=TRUE)
+#' quantile(g)
+#' 
+#' # survival time
 #' f=prodlim(Hist(time,status)~1,data=d)
 #' f1=prodlim(Hist(time,status)~X1,data=d)
 #' # default: median and IQR
@@ -52,6 +58,7 @@
             out <- do.call("cbind",lapply(c("surv","lower","upper"),function(w){
                 sumw <- sum[,w,drop=TRUE]
                 notna= is.na(sumw) | sumw==0 | sumw ==1
+                if (all(notna)) return(NA)
                 xxx=as.numeric(sumw[!notna])
                 ttt=as.numeric(sum[,"time"][!notna])
                 found <- 2+sindex(jump.times=xxx,eval.times=q,comp="greater",strict=FALSE)
@@ -62,11 +69,11 @@
             out <- cbind(q,out)
             names(out) <- c("q","quantile","lower","upper")
             out}
-        if (sumx$cotype==1) out <- list("quantiles.survival"=getQ(sumx$table))
-        else out <- lapply(sumx$table,getQ)
-        attr(out,"model") <- x$model
-        class(out) <- "quantile.prodlim"
-        out
+        if (sumx$cotype==1) {
+            out <- list("quantiles.survival"=getQ(sumx$table))
+        } else{
+            out <- lapply(sumx$table,getQ)
+        }
     } else{
         ## cumulative incidence, competing risks
         if (missing(q)) q <- c(0,0.25,0.5,0.75,1)
@@ -75,6 +82,7 @@
             out <- do.call("cbind",lapply(c("cuminc","lower","upper"),function(w){
                 sumw <- sum[,w,drop=TRUE]
                 notna= is.na(sumw) | sumw==0 | sumw ==1
+                if (all(notna)) return(NA)
                 xxx=as.numeric(sumw[!notna])
                 ttt=as.numeric(sum[,"time"][!notna])
                 found <- 2+sindex(jump.times=xxx,eval.times=q,comp="smaller",strict=FALSE)
@@ -92,10 +100,13 @@
         else {
             out <- lapply(sumx$table[[1]],getQ)
         }
-        attr(out,"model") <- x$model
-        class(out) <- "quantile.prodlim"
         out
     }
+    attr(out,"model") <- x$model
+    attr(out,"reverse") <- x$reverse
+    attr(out,"cotype") <- sumx$cotype
+    class(out) <- "quantile.prodlim"
+    out
 }
       
 
