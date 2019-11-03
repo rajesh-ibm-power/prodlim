@@ -1,7 +1,7 @@
 # {{{ Header
 #' Plotting event probabilities over time
 #' 
-#' Function to plot survival and cumulative incidence curves against time.
+#' Function to plot survival probabilities or absolute risks (cumulative incidence function) against time.
 #' 
 #' From version 1.1.3 on the arguments legend.args, atrisk.args, confint.args
 #' are obsolete and only available for backward compatibility. Instead
@@ -20,20 +20,19 @@
 #' @aliases plot.prodlim lines.prodlim
 #' @param x an object of class `prodlim' as returned by the
 #'     \code{prodlim} function.
-#' @param type Either \code{"surv"} or \code{"cuminc"} controls what
-# part of the object is plotted.  Defaults to \code{object$type}.
-#' @param cause Character (other classes are converted with \code{as.character}).
-#' \code{cause} determines the cause of the cumulative incidence
-#' function.  Currently one cause is allowed at a time, but you can
+#' @param type Either \code{"surv"} or \code{"risk"} AKA \code{"cuminc"}. Controls what
+#' part of the object is plotted.  Defaults to \code{object$type}.
+#' @param cause For competing risk models. Character (other classes are converted with \code{as.character}).
+#' The argument \code{cause} determines the event of interest. Currently one cause is allowed at a time, but you can
 #' call the function again with \code{add=TRUE} to add the lines of the other
-#' causes.
+#' causes. Also, if \code{cause="stacked"} is specified the absolute risks of all causes are stacked.
 #' @param select Select which lines to plot. This can be used when
 #'     there are many strata or many competing risks to select a
 #'     subset of the lines.  However, a more clean way to select
-#'     covariate stratat is to use argument \code{newdata}.  Another
-#'     application is when there are many competing risks and it is
-#'     desired (for the stacked plot) to stack and show only a subset
-#'     of the cumulative incidence functions.
+#'     covariate strata is to use the argument \code{newdata}. Another
+#'     application is when there are several competing risks and the 
+#'      stacked plot (\code{cause="stacked"}) should only show a selected subset
+#'     of the available causes.
 #' @param newdata a data frame containing covariate strata for which
 #'     to show curves. When omitted element \code{X} of object
 #'     \code{x} is used.
@@ -45,7 +44,7 @@
 #' @param xlim limits of the x-axis
 #' @param ylab label for the y-axis
 #' @param xlab label for the x-axis
-#' @param timeconverter The strings are allowed:
+#' @param timeconverter The following options are supported:
 #'  "days2years" (conversion factor: 1/365.25)
 #'  "months2years" (conversion factor: 1/12)
 #'  "days2months" (conversion factor 1/30.4368499)
@@ -118,7 +117,7 @@
 ##' ### marginal Kaplan-Meier estimator
 ##' kmfit <- prodlim(Hist(time, status) ~ 1, data = dat)
 ##' plot(kmfit)
-##'
+##' plot(kmfit,atrisk.show.censored=1L,atrisk.at=seq(0,12,3))
 ##' plot(kmfit,timeconverter="years2months")
 ##' 
 ##' # change time range
@@ -128,7 +127,7 @@
 ##' plot(kmfit,percent=FALSE)
 ##' 
 ##' # mortality instead of survival
-##' plot(kmfit,type="cuminc")
+##' plot(kmfit,type="risk")
 ##' 
 ##' # change axis label and position of ticks
 ##' plot(kmfit,
@@ -171,7 +170,7 @@
 ##' 
 ##' ### Kaplan-Meier in discrete strata
 ##' kmfitX <- prodlim(Hist(time, status) ~ X1, data = dat)
-##' plot(kmfitX)
+##' plot(kmfitX,atrisk.show.censored=1L)
 ##' # move legend
 ##' plot(kmfitX,legend.x="bottomleft",atRisk.cex=1.3,
 ##'      atrisk.title="No. subjects")
@@ -248,6 +247,7 @@
 ##' ### marginal Aalen-Johansen estimator
 ##' ajfit <- prodlim(Hist(time, event) ~ 1, data = datCR)
 ##' plot(ajfit) # same as plot(ajfit,cause=1)
+##' plot(ajfit,atrisk.show.censored=1L)
 ##' 
 ##' # cause 2
 ##' plot(ajfit,cause=2)
@@ -325,22 +325,27 @@ plot.prodlim <- function(x,
     # }}}
     # {{{  extracting a list of lines to draw
 
-  cens.type <- x$cens.type    # uncensored, right or interval censored
-  if (cens.type=="intervalCensored") {
-      confint <- FALSE
-      atrisk <- FALSE
-  }
-  model <- x$model                 # survival, competing risks or multi-state
-  clusterp <- !is.null(x$clustervar)
-  if (missing(type)||is.null(type)){
-      type <- x$type
-      ## type <- switch(model,"survival"="surv","competing.risks"="cuminc","multi.states"="hazard")
-      ## if (!is.null(x$reverse) && x$reverse==TRUE && model=="survival") type <- "cuminc"
-  }
-  else
-      type <- match.arg(type,c("surv","cuminc","hazard"))
-  if (model=="competing.risks" && type=="surv")
-      stop("To plot the event-free survival curve, please fit a suitable model: prodlim(Hist(time,status!=0)~....")
+    cens.type <- x$cens.type    # uncensored, right or interval censored
+    if (cens.type=="intervalCensored") {
+        confint <- FALSE
+        atrisk <- FALSE
+    }
+    model <- x$model                 # survival, competing risks or multi-state
+    clusterp <- !is.null(x$clustervar)
+    if (clusterp ==TRUE && logrank==TRUE){
+        warning("Argument 'logrank' internally set to FALSE due to cluster variable.")
+        logrank=FALSE
+    }
+    if (missing(type)||is.null(type)){
+        type <- x$type
+        ## type <- switch(model,"survival"="surv","competing.risks"="cuminc","multi.states"="hazard")
+        ## if (!is.null(x$reverse) && x$reverse==TRUE && model=="survival") type <- "cuminc"
+    }
+    else
+        type <- match.arg(type,c("surv","risk","cuminc","hazard"))
+    if (type=="cuminc") type = "risk"
+    if (model=="competing.risks" && type=="surv")
+        stop("To plot the event-free survival curve, please fit a suitable model: prodlim(Hist(time,status!=0)~....")
   
     if (cens.type=="intervalCensored")
         plot.times <- sort(unique(x$time[2,]))
@@ -402,7 +407,7 @@ plot.prodlim <- function(x,
         stats=list(c("cause.hazard",0))
     else
         stats=list(c(type,startValue))
-    if (model=="survival" && type=="cuminc") {
+    if (model=="survival" && type=="risk") {
         startValue=1
         stats=list(c("surv",startValue))
     }
@@ -437,7 +442,7 @@ plot.prodlim <- function(x,
     }
     ## cover both no covariate and single newdata:
     if (!is.null(dim(sumX))) sumX <- list(sumX)
-    if (model=="survival" && type=="cuminc"){
+    if (model=="survival" && type=="risk"){
         Y <- lapply(sumX,function(x)1-x[,"surv"])
         names(Y) <- names(sumX)
         nlines <- length(Y)
@@ -453,8 +458,8 @@ plot.prodlim <- function(x,
         nlines <- length(Y)
     }
   
-    # }}}
-    # {{{  getting default arguments for plot, atrisk, axes, legend, confint, marktime
+                                        # }}}
+                                        # {{{  getting default arguments for plot, atrisk, axes, legend, confint, marktime
     if (missing(xlim)) xlim <- c(min(plot.times), max(plot.times))
     if (!missing(timeconverter)){
         units <- strsplit(tolower(as.character(substitute(timeconverter))),"[ \t]?(2|to)[ \t]?")[[1]]
@@ -476,11 +481,17 @@ plot.prodlim <- function(x,
     }
     if (missing(ylab)) ylab <- switch(type,
                                       "surv"=ifelse(x$reverse==TRUE,"Censoring probability","Survival probability"),
-                                      "cuminc"="Cumulative incidence",
+                                      "risk"="Absolute risk",
                                       "hazard"="Cumulative hazard")
     if (missing(ylim)) ylim <- c(0, 1)
     if (missing(lwd)) lwd <- rep(3,nlines)
-    if (missing(col)) col <- 1:nlines
+    if (missing(col)) {
+        cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#D55E00", "#0072B2", "#CC79A7", "#F0E442")
+        if (nlines>length(cbbPalette))
+            col <- rainbow(nlines)
+        else
+            col <- cbbPalette[1:nlines]
+    }
     if (missing(lty)) lty <- rep(1, nlines)
     if (length(lwd) < nlines) lwd <- rep(lwd, nlines)
     if (length(lty) < nlines) lty <- rep(lty, nlines)
@@ -536,7 +547,7 @@ plot.prodlim <- function(x,
                                titlecol=1,
                                title=atriskDefaultTitle,
                                labels=atriskDefaultLabels,
-                               times=atriskDefaultPosition)
+                               times=atriskDefaultPosition,show.censored=FALSE)
     if (!missing(select) && (!(model=="competing.risks" && stacked))){
         atrisk.DefaultArgs$newdata <- atrisk.DefaultArgs$newdata[select,,drop=FALSE]
     }
@@ -569,30 +580,29 @@ plot.prodlim <- function(x,
   # }}}
 # {{{  backward compatibility
 
-  if (match("legend.args",names(allArgs),nomatch=FALSE)){
-      legend.DefaultArgs <- c(args[[match("legend.args",names(allArgs),nomatch=FALSE)]],legend.DefaultArgs)
-      legend.DefaultArgs <- legend.DefaultArgs[!duplicated(names(legend.DefaultArgs))]
-  }
-  if (match("confint.args",names(allArgs),nomatch=FALSE)){
-      confint.DefaultArgs <- c(args[[match("confint.args",names(allArgs),nomatch=FALSE)]],confint.DefaultArgs)
-      confint.DefaultArgs <- confint.DefaultArgs[!duplicated(names(confint.DefaultArgs))]
-  }
-  if (match("atrisk.args",names(allArgs),nomatch=FALSE)){
-      atrisk.DefaultArgs <- c(args[[match("atrisk.args",names(allArgs),nomatch=FALSE)]],atrisk.DefaultArgs)
-      atrisk.DefaultArgs <- atrisk.DefaultArgs[!duplicated(names(atrisk.DefaultArgs))]
-  }
-  if (length(list(...)) && match("legend.legend",names(list(...)),nomatch=FALSE) && any(sapply(newdata,is.factor))){
-      message("Since version 1.5.1 prodlim obeys the order of factor levels.\nThis may break old code which explicitly defines the legend labels.")
-  }
-  
-  smartA <- SmartControl(call=  list(...),
-                         keys=c("plot","lines","atrisk","legend","confint","background","marktime","axis1","axis2"),
-                         ignore=c("x","type","cause","newdata","add","col","lty","lwd","ylim","xlim","xlab","ylab","legend","marktime","confint","automar","atrisk","timeOrigin","percent","axes","atrisk.args","confint.args","legend.args"),
-                         defaults=list("plot"=plot.DefaultArgs,"atrisk"=atrisk.DefaultArgs,"lines"=lines.DefaultArgs,"legend"=legend.DefaultArgs,"confint"=confint.DefaultArgs,"marktime"=marktime.DefaultArgs,"background"=background.DefaultArgs,"axis1"=axis1.DefaultArgs,"axis2"=axis2.DefaultArgs),
-                         forced=list("plot"=list(axes=FALSE),"axis1"=list(side=1)),
-                         ignore.case=TRUE,
-                         replaceDefaults=FALSE,
-                         verbose=TRUE)
+    if (match("legend.args",names(allArgs),nomatch=FALSE)){
+        legend.DefaultArgs <- c(args[[match("legend.args",names(allArgs),nomatch=FALSE)]],legend.DefaultArgs)
+        legend.DefaultArgs <- legend.DefaultArgs[!duplicated(names(legend.DefaultArgs))]
+    }
+    if (match("confint.args",names(allArgs),nomatch=FALSE)){
+        confint.DefaultArgs <- c(args[[match("confint.args",names(allArgs),nomatch=FALSE)]],confint.DefaultArgs)
+        confint.DefaultArgs <- confint.DefaultArgs[!duplicated(names(confint.DefaultArgs))]
+    }
+    if (match("atrisk.args",names(allArgs),nomatch=FALSE)){
+        atrisk.DefaultArgs <- c(args[[match("atrisk.args",names(allArgs),nomatch=FALSE)]],atrisk.DefaultArgs)
+        atrisk.DefaultArgs <- atrisk.DefaultArgs[!duplicated(names(atrisk.DefaultArgs))]
+    }
+    ## if (length(list(...)) && match("legend.legend",names(list(...)),nomatch=FALSE) && any(sapply(newdata,is.factor))){
+    ## message("Since version 1.5.1 prodlim obeys the order of factor levels.\nThis may break old code which explicitly defines the legend labels.")
+    ## }
+    smartA <- SmartControl(call=  list(...),
+                           keys=c("plot","lines","atrisk","legend","confint","background","marktime","axis1","axis2"),
+                           ignore=c("x","type","cause","newdata","add","col","lty","lwd","ylim","xlim","xlab","ylab","legend","marktime","confint","automar","atrisk","timeOrigin","percent","axes","atrisk.args","confint.args","legend.args"),
+                           defaults=list("plot"=plot.DefaultArgs,"atrisk"=atrisk.DefaultArgs,"lines"=lines.DefaultArgs,"legend"=legend.DefaultArgs,"confint"=confint.DefaultArgs,"marktime"=marktime.DefaultArgs,"background"=background.DefaultArgs,"axis1"=axis1.DefaultArgs,"axis2"=axis2.DefaultArgs),
+                           forced=list("plot"=list(axes=FALSE),"axis1"=list(side=1)),
+                           ignore.case=TRUE,
+                           replaceDefaults=FALSE,
+                           verbose=TRUE)
 
   # }}}
   # {{{  setting margin parameters

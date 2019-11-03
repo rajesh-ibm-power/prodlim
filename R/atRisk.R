@@ -26,6 +26,7 @@
 #' @param dist If \code{line} is missing, the distance of the upper
 #' most atrisk row from the inner plotting region: par()$mgp[2].
 #' @param adjust.labels If \code{TRUE} the labels are left adjusted.
+#' @param show.censored If \code{TRUE} the cumulative number of subjects lost to follow up is shown in parentheses.
 #' @param ... Further arguments that are passed to the function
 #' \code{mtext}.
 #' @return Nil
@@ -49,34 +50,35 @@ atRisk <- function(x,
                    adj,
                    dist,
                    adjust.labels=TRUE,
+                   show.censored=FALSE,
                    ...){
     if (missing(times)) times <- seq(0,x$maxtime,x$maxtime/10)
     if (x$model=="competing.risks"){
-        px <- lifeTab(object=x,times=times,cause=getStates(x)[1],newdata=newdata,stats=NULL)[[1]]
+        px <- lifeTab(object=x,times=times,cause=getStates(x)[1],newdata=newdata,stats=NULL,intervals=show.censored)[[1]]
     }
     else if (x$model=="survival"){
-        px <- lifeTab(object=x,times=times,newdata=newdata,stats=NULL)
+        px <- lifeTab(object=x,times=times,newdata=newdata,stats=NULL,intervals=show.censored)
     }
     if (is.matrix(px) || is.data.frame(px))
         sumx <- lapply(data.frame(px)[,grep("n.risk",colnames(px)),drop=FALSE],function(x)x)
     else
         sumx <- lapply(px,function(v){
-                           u <- v[,grep("n.risk",colnames(v)),drop=FALSE]
-                           if (NCOL(u)>1){
-                               ulist <- lapply(1:NCOL(u),function(i)u[,i])
-                               names(ulist) <- colnames(u)
-                               ulist
-                           }
-                           else
-                               u
-                       })
+            u <- v[,grep("n.risk",colnames(v)),drop=FALSE]
+            if (NCOL(u)>1){
+                ulist <- lapply(1:NCOL(u),function(i)u[,i])
+                names(ulist) <- colnames(u)
+                ulist
+            }
+            else
+                u
+        })
     if (is.list(sumx[[1]]))
         sumx <- unlist(sumx,recursive=FALSE)
     if (all(sapply(sumx,NCOL))==1)
         nlines <- length(sumx)
     if (missing(line)){
         line <- par()$mgp[2] + dist +
-            (0:(2*nlines-1)) *interspace -(nlines-1)
+                    (0:(2*nlines-1)) *interspace -(nlines-1)
     }
     if (missing(cex)) cex <- 1
     ## if (missing(pos)) pos <- min(times)
@@ -93,23 +95,23 @@ atRisk <- function(x,
     if (is.null(titlecol)){
         tcol <- 1
     } else {
-          if (is.na(titlecol[1]))
-              tcol <- 1
-          else
-              tcol <- titlecol[1]
-      }
+        if (is.na(titlecol[1]))
+            tcol <- 1
+        else
+            tcol <- titlecol[1]
+    }
     ##
     if (!is.null(title))
         mtext(title,
-                        side=1,
-                        at=pos,
-                        col=tcol,
-                        line=line[1]-1,
-                        adj=adj,
-                        cex=cex,
-                        outer=FALSE,
-                        xpd=NA,
-                        ...)
+              side=1,
+              at=pos,
+              col=tcol,
+              line=line[1]-1,
+              adj=adj,
+              cex=cex,
+              outer=FALSE,
+              xpd=NA,
+              ...)
     # labeling the no. at-risk below plot
     # --------------------------------------------------------------------
     ## if (is.null(adjust.labels) || adjust.labels==TRUE){
@@ -117,34 +119,58 @@ atRisk <- function(x,
     if (length(col)==nlines/2) ## 1 cluster level
         col <- rep(col,rep(2,length(col)))
     lapply(1:nlines,function(y){
-               mtext(text=as.character(sumx[[y]]),
-                               side=1,
-                               at=times,
-                               line=rep(line[y],length(times)),
-                               col=rep(col[y],length(times)),
-                               cex=cex,
-                               outer=FALSE,
-                               xpd=NA,
-                               ...)
-               if (is.null(labelcol)){
-                   lcol <- col[y]
-               } else {
-                     if (is.na(labelcol[y]))
-                         lcol <- labelcol[1]
-                     else
-                         lcol <- labelcol[y]
-                 }
-               ## print(labels[y])
-               mtext(text=labels[y],
-                               side=1,
-                               at=pos,
-                               col=labelcol[y],
-                               ## col=1,
-                               line=line[y],
-                               adj=adj,
-                               cex=cex,
-                               outer=FALSE,
-                               xpd=NA,
-                               ...)
-           })
+        if (show.censored==FALSE){
+            atrisk.text <- as.character(sumx[[y]])
+        }else{
+            if (is.matrix(px) || is.data.frame(px)){
+                ncens <- lapply(data.frame(px)[,grep("n.lost",colnames(px)),drop=FALSE],function(x)x)
+            }else{
+                ncens <- lapply(px,function(v){
+                    u <- v[,grep("n.lost",colnames(v)),drop=FALSE]
+                    if (NCOL(u)>1){
+                        ulist <- lapply(1:NCOL(u),function(i)u[,i])
+                        names(ulist) <- colnames(u)
+                        ulist
+                    }
+                    else
+                        u
+                })
+            }
+            if (is.list(ncens[[1]]))
+                ncens <- unlist(ncens,recursive=FALSE)
+            atrisk.text <- paste0(as.character(sumx[[y]]),
+                                  " (",
+                                  cumsum(ncens[[y]]),
+                                  ")")
+        }
+        mtext(text=atrisk.text,
+              side=1,
+              at=times,
+              line=rep(line[y],length(times)),
+              col=rep(col[y],length(times)),
+              cex=cex,
+              outer=FALSE,
+              xpd=NA,
+              ...)
+        if (is.null(labelcol)){
+            lcol <- col[y]
+        } else {
+            if (is.na(labelcol[y]))
+                lcol <- labelcol[1]
+            else
+                lcol <- labelcol[y]
+        }
+        ## print(labels[y])
+        mtext(text=labels[y],
+              side=1,
+              at=pos,
+              col=labelcol[y],
+              ## col=1,
+              line=line[y],
+              adj=adj,
+              cex=cex,
+              outer=FALSE,
+              xpd=NA,
+              ...)
+    })
 }
