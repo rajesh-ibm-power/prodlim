@@ -1,4 +1,4 @@
-4d5bb99cc75fc52f8354fa021a91ef5b *DESCRIPTION
+0af8c1cd4f0bbae65bbb65dca5413a9e *DESCRIPTION
 6d6d0267b2b07747cc1bef3c1294da4f *NAMESPACE
 3b4b6ca2cb60e6617372018c4af2e931 *R/EventHistory.frame.R
 9ea93fcf0fac8e3cb7dc3dc62db79105 *R/Hist.R
@@ -25,8 +25,8 @@ b2cb2d803b526f2fbdd920c0d655966f *R/getEvent.R
 b993b8e9335a084c16dfd634afe05345 *R/jackknife.R
 afad7d1176053f44fd151ad6a755fda4 *R/leaveOneOut.R
 48e459a128162320bcce808c550384a3 *R/lifeTab.R
-4170807138bbfd4ed5bb1e6fb004bc83 *R/lifeTab.competing.risks.R
-d0dec8bc01828b0f2224236ff7bdb8c6 *R/lifeTab.survival.R
+5b18335c06685b59849bd2afb0792ead *R/lifeTab.competing.risks.R
+eb1059d7311250a847a4965ecfc1902e *R/lifeTab.survival.R
 68938f12148cbaa743b8c3a0e541232c *R/lines.prodlim.R
 6a4e6eccebdcf48a68992fc04998bf17 *R/listNbh.R
 f05ddd4f73b00c1b6c3c9a6d0c62b6b2 *R/markTime.R
@@ -51,7 +51,7 @@ f94cd63d1d15681cfb095ac087b52f8b *R/predictSurvIndividual.R
 cbce039d373a6d0f15db52a8c58cd304 *R/print.quantile.prodlim.R
 0a5cd312fc08c8c00d7fea83977cccf6 *R/print.summary.prodlim.R
 95ac1809432b50f3212279e118532a4e *R/prodlim-package.R
-12d401511bd42919290765fc81a99340 *R/prodlim.R
+46e56a910d1cbd71a81918809ce5106d *R/prodlim.R
 33bd15d77d337f6e6f2d77a95cb2f4e9 *R/prodlimIcensSurv.R
 5fefc2bba43698b27c38b473bfdfbf3e *R/prodlimMulti.R
 4c3063fd422deb6f8e350cb0d3042f28 *R/quantile.prodlim.R
@@ -63,7 +63,7 @@ d2cb8ba989f625cfcfff3f9efaa73483 *R/row.match.R
 42d556305d242e28a519ae886b89f4ec *R/stopTime.R
 e8b37a5dd8c9d24280b0b9b2cc51f197 *R/strip.terms.R
 0b8038e0f90786b8c0b6d8a66af8cf83 *R/summary.Hist.R
-5925af56bfabeb5a24e1ea8bc19e0dc8 *R/summary.prodlim.R
+29a48635e2397caf06fdc60a4537655d *R/summary.prodlim.R
 1f3eef15b8fd6c5134c5d00f2262f0d2 *R/survModel.R
 2e5ed60eb937b33a7467217bdfd1772f *man/EventHistory.frame.Rd
 691432fd97d8335d40e1916fc02f8718 *man/Hist.Rd
@@ -118,11 +118,11 @@ a5581f4f3600e469cfaff7ce299945d7 *src/predict.c
 5f1470759e965af99d7a7b7e6a3fe46c *src/prodlim.c
 10fc02f73f2749ca2f6fcdec4ed7d9ee *src/prodlim.h
 0e936788c700c2f034cebaa9053cf77a *src/prodlim_clustersurv.c
-ea2138aa9f5c7d0e6563ec998bc97af1 *src/prodlim_comprisk.c
+ca4e2987633b60a105ab7f9f04b2b4e6 *src/prodlim_comprisk.c
 d1c99c1c29b55aea6098e244467e8d3a *src/prodlim_multistates.c
-65bf4608a9e471461053f067325cd1a4 *src/prodlim_surv.c
+1f439a4dc32231e70473f25195a5dbac *src/prodlim_surv.c
 5c8f514a1b3f8c8894a04acff8a26744 *src/sindex.c
 4a357739645a72a67efa4714aaa33711 *src/summary_prodlim.c
 de807f9d7a6107094bdc1a7d25b7f9b4 *tests/testthat/cluster.R
 ee15ec9f48f499a546eaf5b9b1389c6b *tests/testthat/pseudo.R
-12fc21cd542146a4e0ab8137426460a4 *tests/testthat/test-prodlim.R
+8a200651b1d50335f98079a9c33c65a9 *tests/testthat/test-prodlim.R
